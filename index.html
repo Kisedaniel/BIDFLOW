@@ -2232,8 +2232,8 @@ window.BYPASS_LOGIN = true;
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
-const SUPABASE_URL = 'https://gvpsxsqloeklghcaxudg.supabase.co/rest/v1';
-const SUPABASE_ANON_KEY = 'sb_publishable_cyNiDa7gYaIkoW1CHPOu_A_9wWo_02T';
+const SUPABASE_URL = 'https://gvpsxsqloeklghcaxudg.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2cHN4c3Fsb2VrbGdoY2F4dWRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MjM1ODcsImV4cCI6MjA5NTE5OTU4N30.KyhbD-ZEg-OG9PXAKlodBQRqgLK1_P_AkQMtJptp_VI';
 
 // ============================================================
 // SUBSCRIPTION CONFIG  — EDIT HERE WHEN YOU HAVE YOUR PAYMENT LINK
@@ -10008,24 +10008,25 @@ function buildWsWizard() {
   }
 
   return `
-    <div class="backdrop" onclick="if(confirm('Discard workspace wizard?'))ST.wsWizard=null;render()"></div>
-    <div class="modal modal-lg" style="max-width:720px;width:90vw;max-height:90vh;display:flex;flex-direction:column">
-      ${close}
+    <div class="backdrop" onclick="if(event.target===this){if(confirm('Discard workspace wizard?')){ST.wsWizard=null;render()}}">
+      <div class="modal modal-lg" style="max-width:720px;width:90vw;max-height:90vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+        ${close}
 
-      <!-- Step indicator -->
-      <div style="display:flex;gap:0;padding:14px 20px 0;border-bottom:1px solid var(--border)">
-        ${[1,2,3,4].map(n => `
-          <div style="flex:1;text-align:center;padding-bottom:10px;border-bottom:2px solid ${n===step?'var(--amber)':n<step?'var(--green)':'transparent'};font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:${n===step?'var(--amber)':n<step?'var(--green)':'var(--text3)'};font-weight:${n===step?'600':'500'}">
-            ${n<step?'✓ ':''}${n===1?'Identity':n===2?'Divisions':n===3?'Jurisdictions':'Templates'}
-          </div>
-        `).join('')}
-      </div>
+        <!-- Step indicator -->
+        <div style="display:flex;gap:0;padding:14px 20px 0;border-bottom:1px solid var(--border)">
+          ${[1,2,3,4].map(n => `
+            <div style="flex:1;text-align:center;padding-bottom:10px;border-bottom:2px solid ${n===step?'var(--amber)':n<step?'var(--green)':'transparent'};font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:${n===step?'var(--amber)':n<step?'var(--green)':'var(--text3)'};font-weight:${n===step?'600':'500'}">
+              ${n<step?'✓ ':''}${n===1?'Identity':n===2?'Divisions':n===3?'Jurisdictions':'Templates'}
+            </div>
+          `).join('')}
+        </div>
 
-      <div style="flex:1;overflow-y:auto">
-        ${body}
-        <div style="height:20px"></div>
+        <div style="flex:1;overflow-y:auto">
+          ${body}
+          <div style="height:20px"></div>
+        </div>
+        ${nav(canNext, nextLabel)}
       </div>
-      ${nav(canNext, nextLabel)}
     </div>
   `;
 }
@@ -10068,24 +10069,25 @@ function buildWsSettingsModal() {
   const editingId = ST.wsSettingsModal === true ? ST.activeWorkspace : ST.wsSettingsModal;
   const ws = ST.workspaces?.[editingId];
   if (!ws) {
-    return `<div class="backdrop" onclick="ST.wsSettingsModal=null;render()"></div>
-      <div class="modal" style="max-width:400px">
+    return `<div class="backdrop" onclick="if(event.target===this){ST.wsSettingsModal=null;render()}">
+      <div class="modal" style="max-width:400px" onclick="event.stopPropagation()">
         <div style="padding:20px">Workspace not found.</div>
-      </div>`;
+      </div>
+    </div>`;
   }
 
   return `
-    <div class="backdrop" onclick="ST.wsSettingsModal=null;render()"></div>
-    <div class="modal modal-lg" style="max-width:680px;width:90vw;max-height:90vh;display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:2px">Workspace settings</div>
-          <div style="font-family:var(--sans);font-size:16px;font-weight:600;color:var(--text)">${esc(ws.name)}</div>
+    <div class="backdrop" onclick="if(event.target===this){ST.wsSettingsModal=null;render()}">
+      <div class="modal modal-lg" style="max-width:680px;width:90vw;max-height:90vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:2px">Workspace settings</div>
+            <div style="font-family:var(--sans);font-size:16px;font-weight:600;color:var(--text)">${esc(ws.name)}</div>
+          </div>
+          <button onclick="ST.wsSettingsModal=null;render()" style="background:transparent;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1">×</button>
         </div>
-        <button onclick="ST.wsSettingsModal=null;render()" style="background:transparent;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1">×</button>
-      </div>
 
-      <div style="flex:1;overflow-y:auto;padding:20px">
+        <div style="flex:1;overflow-y:auto;padding:20px">
 
         <!-- Switch workspace -->
         ${wsList.length > 1 ? `
@@ -10176,6 +10178,7 @@ function buildWsSettingsModal() {
       <div style="padding:14px 20px;border-top:1px solid var(--border);text-align:right">
         <button class="btn btn-amber" onclick="ST.wsSettingsModal=null;render()">Done</button>
       </div>
+    </div>
     </div>
   `;
 }
