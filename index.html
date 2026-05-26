@@ -2595,7 +2595,21 @@ async function flushSave() {
     return;
   }
 
+  // Map each key to its appropriate empty default (so we never send NULL)
+  // — arrays for list-shaped data, objects for keyed maps.
+  const KEY_DEFAULTS = {
+    addedSubs: [],
+    addedProjects: [],
+    activityLog: [],
+    estimateTemplates: [],
+    customCategories: [],
+    printTemplates: [],
+    // Everything else defaults to {}
+  };
+  const defaultFor = (k) => KEY_DEFAULTS[k] !== undefined ? KEY_DEFAULTS[k] : {};
+
   const rows = [];
+  const skipped = [];
   for (const k of SAVE_STATE.pendingKeys) {
     let v;
     if (k === 'overrides') v = ST.overrides;
@@ -2620,8 +2634,19 @@ async function flushSave() {
     else if (k === 'printTemplates') v = ST.printTemplates;
     else if (k === 'estimator') v = ST.estimator;
     else if (k === 'bidStages') v = ST.bidStages;
+
+    // Critical: app_state.value is NOT NULL. Substitute appropriate empty default.
+    if (v === undefined || v === null) {
+      v = defaultFor(k);
+      skipped.push(k);
+    }
     rows.push({ workspace_id: ST.activeWorkspace, key: k, value: v });
   }
+
+  if (skipped.length > 0) {
+    console.log('flushSave: substituted empty defaults for null/undefined keys:', skipped);
+  }
+
   const keysToFlush = [...SAVE_STATE.pendingKeys];
   SAVE_STATE.pendingKeys.clear();
 
