@@ -2889,10 +2889,13 @@ body[data-theme="hc"] {
   box-shadow:0 1px 0 rgba(20,18,15,.06), 0 4px 12px rgba(20,18,15,.04);
 }
 
-/* —— Modal slide-fade and backdrop —— */
-.backdrop{animation:backdrop-fade 180ms cubic-bezier(.2,0,0,1)}
+/* —— Modal slide-fade and backdrop ——
+   Animate only on first appearance (.just-opened), not on every re-render
+   while the modal is open — otherwise editing inside a modal makes it
+   flicker/jump on each keystroke. —— */
+.backdrop.just-opened{animation:backdrop-fade 180ms cubic-bezier(.2,0,0,1)}
 @keyframes backdrop-fade{from{opacity:0;backdrop-filter:blur(0)}to{opacity:1;backdrop-filter:blur(3px)}}
-.modal{animation:modal-up 220ms cubic-bezier(.2,.8,.2,1.05) !important}
+.backdrop.just-opened .modal{animation:modal-up 220ms cubic-bezier(.2,.8,.2,1.05) !important}
 @keyframes modal-up{from{transform:translateY(14px) scale(.985);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
 
 /* —— Detail panel content fade-in: REMOVED.
@@ -2928,8 +2931,11 @@ body[data-theme="hc"] {
 .ws-switcher-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(196,74,44,.06),transparent);transform:translateX(-100%);transition:transform 600ms cubic-bezier(.2,0,0,1);pointer-events:none}
 .ws-switcher-btn:hover::before{transform:translateX(100%)}
 
-/* —— Tab transition when switching: gentle slide —— */
-.app-main > .content{animation:tab-switch 240ms cubic-bezier(.2,0,0,1)}
+/* —— Tab transition when switching: gentle slide ——
+   Only applied when the tab actually changes (via .tab-just-switched class
+   added by render()), NOT on every re-render — otherwise the whole content
+   area flickers on every single state change. —— */
+.app-main > .content.tab-just-switched{animation:tab-switch 240ms cubic-bezier(.2,0,0,1)}
 @keyframes tab-switch{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
 /* Allow .lt letters to pop above .ws-name's overflow:hidden */
@@ -4622,7 +4628,7 @@ async function doPasswordReset() {
   if (!email) return;
   const { error } = await sb.auth.resetPasswordForEmail(email);
   if (error) alert('Error: ' + error.message);
-  else alert('Te enviamos un correo con las instrucciones.');
+  else alert('We sent you an email with reset instructions.');
 }
 
 function buildLoginScreen() {
@@ -4727,69 +4733,231 @@ function buildPricingScreen() {
 // USER MANAGEMENT
 // ============================================================
 async function openUsersModal() {
+  ST.usersModal = { users: [], loading: true };
+  render();
   try {
-    const { data, error } = await sb.from('team_members').select('*').order('email');
+    const wsId = ST.activeWorkspace;
+    if (!wsId) { ST.usersModal = { users: [], loading: false, error: 'No active workspace.' }; render(); return; }
+    // Load members of the ACTIVE workspace. We store email + display_name
+    // directly on workspace_members so we can show them without the admin API.
+    const { data, error } = await sb
+      .from('workspace_members')
+      .select('*')
+      .eq('workspace_id', wsId);
     if (error) throw error;
-    ST.usersModal = { users: data || [] };
+    ST.usersModal = { users: data || [], loading: false, wsId };
     render();
-  } catch(e) { alert('Error: ' + e.message); }
+  } catch(e) {
+    console.error('openUsersModal:', e);
+    ST.usersModal = { users: [], loading: false, error: e.message };
+    render();
+  }
 }
 
 function closeUsersModal() { ST.usersModal = null; render(); }
 
 async function addNewUser() {
-  const email = document.getElementById('newu-email').value.trim();
-  const pass  = document.getElementById('newu-pass').value;
-  const disp  = document.getElementById('newu-display').value.trim();
-  if (!email || !pass) { alert('Email and password required'); return; }
-  if (pass.length < 6) { alert('Contraseña debe tener al menos 6 caracteres'); return; }
+  const email = document.getElementById('newu-email')?.value.trim();
+  const pass  = document.getElementById('newu-pass')?.value;
+  const disp  = document.getElementById('newu-display')?.value.trim();
+  const role  = document.getElementById('newu-role')?.value || 'member';
+  const wsId  = ST.usersModal?.wsId || ST.activeWorkspace;
+  if (!email || !pass) { showToast('Email and password are required.', 'warn'); return; }
+  if (pass.length < 6) { showToast('Password must be at least 6 characters.', 'warn'); return; }
+  if (!wsId) { showToast('No active workspace.', 'error'); return; }
+
   try {
-    const { error } = await sb.auth.signUp({
+    // NOTE: signUp creates the auth user but also signs them in on this client,
+    // which would replace the master's session. To avoid that, we capture the
+    // current session and restore it right after.
+    const currentSession = (await sb.auth.getSession()).data.session;
+
+    const { data: signUpData, error: signUpErr } = await sb.auth.signUp({
       email, password: pass,
-      options: { data: { display_name: disp || email } }
+      options: { data: { display_name: disp || email } },
+    });
+    if (signUpErr) throw signUpErr;
+    const newUserId = signUpData.user?.id;
+
+    // Restore the master's session (signUp may have swapped it)
+    if (currentSession) {
+      await sb.auth.setSession({
+        access_token: currentSession.access_token,
+        refresh_token: currentSession.refresh_token,
+      });
+    }
+
+    // Link the new user to the active workspace
+    if (newUserId) {
+      const { error: linkErr } = await sb.from('workspace_members').insert({
+        workspace_id: wsId,
+        user_id: newUserId,
+        email: email,
+        display_name: disp || email,
+        role: role,
+        is_master: false,
+      });
+      if (linkErr) throw linkErr;
+    }
+
+    showToast('User created and added to this workspace.', 'success');
+    // Clear inputs
+    ['newu-email','newu-pass','newu-display'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    openUsersModal();
+  } catch(e) {
+    console.error('addNewUser:', e);
+    showToast('Could not create user: ' + e.message, 'error');
+  }
+}
+
+// Add an EXISTING user to this workspace by email (they already have an account)
+async function addExistingUserByEmail() {
+  const email = document.getElementById('addex-email')?.value.trim();
+  const role  = document.getElementById('addex-role')?.value || 'member';
+  const wsId  = ST.usersModal?.wsId || ST.activeWorkspace;
+  if (!email) { showToast('Enter an email.', 'warn'); return; }
+  if (!wsId) { showToast('No active workspace.', 'error'); return; }
+  try {
+    // We can't look up auth users by email from the client, so we store the
+    // email on the membership row. When that user logs in, a trigger or the
+    // app reconciles user_id. For now we insert with a null user_id + email.
+    const { error } = await sb.from('workspace_members').insert({
+      workspace_id: wsId,
+      user_id: null,
+      email: email,
+      display_name: email,
+      role: role,
+      is_master: false,
+      pending: true,
     });
     if (error) throw error;
-    alert('Usuario creado. Si el email necesita verificación, avisa a la persona de confirmar el correo.');
+    showToast(`Invited ${email} to this workspace.`, 'success');
+    const el = document.getElementById('addex-email'); if (el) el.value = '';
     openUsersModal();
-  } catch(e) { alert('Error: ' + e.message); }
+  } catch(e) {
+    console.error('addExistingUserByEmail:', e);
+    showToast('Could not add user: ' + e.message, 'error');
+  }
+}
+
+async function removeUserFromWorkspace(memberId, email) {
+  if (!confirm(`Remove ${email || 'this user'} from this workspace?\n\nTheir account is not deleted — they just lose access to this workspace.`)) return;
+  try {
+    const { error } = await sb.from('workspace_members').delete().eq('id', memberId);
+    if (error) throw error;
+    showToast('User removed from workspace.', 'success');
+    openUsersModal();
+  } catch(e) {
+    console.error('removeUserFromWorkspace:', e);
+    showToast('Could not remove user: ' + e.message, 'error');
+  }
+}
+
+async function changeUserRole(memberId, newRole) {
+  try {
+    const { error } = await sb.from('workspace_members').update({ role: newRole }).eq('id', memberId);
+    if (error) throw error;
+    showToast('Role updated.', 'success');
+    openUsersModal();
+  } catch(e) {
+    console.error('changeUserRole:', e);
+    showToast('Could not update role: ' + e.message, 'error');
+  }
 }
 
 async function changeMyPassword() {
   const nw = prompt('New password (minimum 6 characters):');
-  if (!nw || nw.length < 6) { alert('Invalid password'); return; }
+  if (!nw || nw.length < 6) { showToast('Invalid password — minimum 6 characters.', 'warn'); return; }
   try {
     const { error } = await sb.auth.updateUser({ password: nw });
     if (error) throw error;
-    alert('Password updated');
-  } catch(e) { alert('Error: ' + e.message); }
+    showToast('Password updated.', 'success');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 function buildUsersModal() {
   if (!ST.usersModal) return '';
   const users = ST.usersModal.users || [];
+  const loading = ST.usersModal.loading;
+  const err = ST.usersModal.error;
+  const wsId = ST.usersModal.wsId || ST.activeWorkspace;
+  const ws = ST.workspaces?.[wsId];
+  const wsName = ws?.name || 'this workspace';
+
   return `<div class="backdrop" onclick="if(event.target===this)closeUsersModal()">
-    <div class="modal" style="max-width:520px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div class="modal-title">Usuarios del equipo</div>
-        <button class="btn btn-ghost" onclick="closeUsersModal()">✕</button>
+    <div class="modal" style="max-width:560px" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div>
+          <div style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)">Team · ${esc(wsName)}</div>
+          <div class="modal-title" style="margin-top:2px">Manage users</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="closeUsersModal()">✕</button>
       </div>
-      <div style="margin-bottom:16px;max-height:240px;overflow-y:auto">
-        ${users.map(u => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border)">
-          <div>
-            <div style="font-size:13px;color:var(--text);font-weight:500">${esc(u.display_name || u.email)}</div>
-            <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">${esc(u.email || '')}</div>
-          </div>
-          ${u.id === AUTH.user?.id ? '<span style="font-family:var(--mono);font-size:10px;color:var(--amber)">(tú)</span>' : ''}
-        </div>`).join('')}
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:14px;line-height:1.5">
+        Users here can access <strong>${esc(wsName)}</strong> only. Switch workspaces to manage a different client's team.
       </div>
-      <div style="border-top:1px solid var(--border);padding-top:14px">
-        <div class="modal-sub" style="margin-bottom:10px">Agregar nuevo usuario</div>
-        <input id="newu-email" type="email" placeholder="Email" style="width:100%;background:var(--bg1);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;margin-bottom:6px">
-        <input id="newu-display" placeholder="Nombre para mostrar" style="width:100%;background:var(--bg1);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;margin-bottom:6px">
-        <input id="newu-pass" type="password" placeholder="Contraseña temporal (mín 6 caracteres)" style="width:100%;background:var(--bg1);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;margin-bottom:10px">
-        <button class="btn btn-amber" style="width:100%" onclick="addNewUser()">Create user</button>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:8px;line-height:1.5">
-          Nota: el usuario recibirá un correo de confirmación si la verificación está activa en Supabase. Para eliminar usuarios, hazlo desde el dashboard de Supabase (Authentication → Users).
+
+      ${err ? `<div style="background:var(--red-bg);border:1px solid var(--red-border);color:var(--red);padding:10px 12px;border-radius:var(--r);font-family:var(--mono);font-size:11px;margin-bottom:14px">${esc(err)}</div>` : ''}
+
+      <div style="margin-bottom:18px;border:1px solid var(--border);border-radius:var(--r2);overflow:hidden">
+        ${loading ? `<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--text3)">Loading members…</div>`
+          : users.length === 0 ? `<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--text3)">No members yet. Add the first user below.</div>`
+          : users.map(u => `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)">
+            <div style="min-width:0;flex:1">
+              <div style="font-size:13px;color:var(--text);font-weight:500;display:flex;align-items:center;gap:8px">
+                ${esc(u.display_name || u.email || 'Unknown')}
+                ${u.is_master ? '<span style="font-family:var(--mono);font-size:8px;letter-spacing:.08em;color:var(--amber);border:1px solid var(--amber-border);background:var(--amber-bg);padding:1px 5px;border-radius:8px">MASTER</span>' : ''}
+                ${u.pending ? '<span style="font-family:var(--mono);font-size:8px;letter-spacing:.08em;color:var(--text3);border:1px solid var(--border);padding:1px 5px;border-radius:8px">PENDING</span>' : ''}
+                ${u.user_id === AUTH.user?.id ? '<span style="font-family:var(--mono);font-size:9px;color:var(--amber)">(you)</span>' : ''}
+              </div>
+              <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:1px">${esc(u.email || '')}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+              ${u.is_master ? `<span style="font-family:var(--mono);font-size:10px;color:var(--text3)">${esc(u.role||'admin')}</span>` : `
+                <select onchange="changeUserRole('${u.id}', this.value)" class="minp" style="font-family:var(--mono);font-size:10px;padding:3px 6px;width:auto">
+                  <option value="admin"${u.role==='admin'?' selected':''}>Admin</option>
+                  <option value="member"${u.role==='member'||!u.role?' selected':''}>Member</option>
+                  <option value="viewer"${u.role==='viewer'?' selected':''}>Viewer</option>
+                </select>
+                <button onclick="removeUserFromWorkspace('${u.id}','${esc(u.email||'')}')" title="Remove from workspace" style="background:transparent;border:1px solid var(--border);color:var(--text3);padding:4px 8px;font-family:var(--mono);font-size:11px;cursor:pointer;border-radius:var(--r)">✕</button>
+              `}
+            </div>
+          </div>`).join('')}
+      </div>
+
+      <!-- Create new user -->
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-bottom:14px">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Create new user for this workspace</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+          <input id="newu-email" type="email" placeholder="Email" class="minp">
+          <input id="newu-display" placeholder="Display name" class="minp">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-bottom:10px">
+          <input id="newu-pass" type="password" placeholder="Temporary password (min 6 chars)" class="minp">
+          <select id="newu-role" class="minp" style="width:auto">
+            <option value="admin">Admin</option>
+            <option value="member" selected>Member</option>
+            <option value="viewer">Viewer</option>
+          </select>
+        </div>
+        <button class="btn btn-amber" style="width:100%" onclick="addNewUser()">Create user &amp; add to workspace</button>
+      </div>
+
+      <!-- Add existing user -->
+      <div style="border-top:1px solid var(--border);padding-top:16px">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Invite an existing user by email</div>
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px">
+          <input id="addex-email" type="email" placeholder="their@email.com" class="minp">
+          <select id="addex-role" class="minp" style="width:auto">
+            <option value="admin">Admin</option>
+            <option value="member" selected>Member</option>
+            <option value="viewer">Viewer</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="addExistingUserByEmail()">Invite</button>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:8px;line-height:1.5">
+          Creating a user requires a temporary password. Inviting links an email that already has an account — they'll get access next time they log in. To fully delete an account, use the Supabase dashboard.
         </div>
       </div>
     </div>
@@ -4985,10 +5153,34 @@ function addActivity(type, sub, proj, cat, price, oldPrice, note) {
 // ============================================================
 // RENDER
 // ============================================================
+// Animation-gating trackers — prevent entry animations from re-firing on
+// every full-DOM re-render (which caused screen flicker).
+let _lastRenderedTab = null;
+let _lastOverlaySig = '';
 function render() {
   if (typeof installGlobalErrorHandler === 'function') installGlobalErrorHandler();
   // Invalidate memoization caches at the start of each render
   _invalidateProjectSubCache();
+
+  // ── Animation gating: only animate tab-switch when the tab actually changes,
+  // and only animate a modal/backdrop the first time it appears. Without this,
+  // the full DOM rebuild on every render re-triggers entry animations and the
+  // screen flickers on every keystroke/click. ──
+  const tabChanged = (_lastRenderedTab !== ST.tab);
+  _lastRenderedTab = ST.tab;
+  // Signature of currently-open overlays (modal/dropdown/wizard) to detect "new"
+  const overlaySig = [
+    ST.usersModal ? 'users' : '',
+    ST.wsSettingsModal ? 'wsset' : '',
+    ST.wsWizard ? 'wswiz' : '',
+    ST.dropdown ? 'dd:'+ST.dropdown.type : '',
+    ST.bidsModal ? 'bids' : '',
+    ST.sendDialog ? 'send' : '',
+    ST.estimatorAskAIOpen ? 'askai' : '',
+  ].filter(Boolean).join('|');
+  const overlayJustOpened = overlaySig && overlaySig !== _lastOverlaySig;
+  _lastOverlaySig = overlaySig;
+
   const a = document.activeElement;
   const fid = a && a.id ? a.id : null;
   let selStart=null, selEnd=null, scrollTop=null;
@@ -5024,6 +5216,14 @@ function render() {
     html = buildErrorBoundaryFallback(error, `Rendering tab "${ST.tab}"`);
   }
   document.getElementById('app').innerHTML = html;
+  // Apply entry-animation classes ONLY when warranted (see gating above)
+  if (tabChanged) {
+    const contentEl = document.querySelector('.app-main > .content');
+    if (contentEl) contentEl.classList.add('tab-just-switched');
+  }
+  if (overlayJustOpened) {
+    document.querySelectorAll('.backdrop').forEach(el => el.classList.add('just-opened'));
+  }
   if (typeof installLogoDragHandlerOnce === 'function') installLogoDragHandlerOnce();
   if (window.lucide && typeof window.lucide.createIcons === 'function') { try { window.lucide.createIcons(); } catch(e) {} }
   if (fid) {
@@ -7757,7 +7957,7 @@ function buildSidebar() {
 
     <div class="sb-section" style="margin-top:8px"><span>OTHERS</span></div>
     <nav class="sb-nav">
-      ${hasFeature('sendcenter') ? `<button class="sb-item" onclick="ST.userMenuOpen=false;openUsersModal()" title="Manage team">
+      ${(hasFeature('sendcenter') || AUTH.isMaster) ? `<button class="sb-item" onclick="ST.userMenuOpen=false;openUsersModal()" title="Manage team">
         <i data-lucide="user"></i><span>Team</span>
       </button>` : ''}
       <button class="sb-item${tab==='settings'?' active':''}" onclick="setTab('settings')" title="Defaults, currency, signature">
