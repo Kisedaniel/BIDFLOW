@@ -3938,6 +3938,7 @@ let ST = {
   // UI ephemeral
   dropdown: null,    // {type:'status'|'set', pid, cat?, x, y}
   bidsModal: null,   // {pid, cat}
+  bidLeveling: {},   // {[projName|||cat]: {status, stage, result, error, ts}} — AI bid leveling (in-memory, not persisted)
   addProjModal: false,
   addSubModal: false,
   editSubModal: null,
@@ -4095,6 +4096,7 @@ let ST = {
   toExtraction: {},          // {[pid]: ...} — legacy AI extraction (kept for backward compat, no longer used)
   toCalculator: {},          // {[pid]: { [code]: { enabled: bool, qty: number } }} — manual budget calculator state
   readPlansStatus: null,     // {pid, running, page, total, lastResult, error} — Read Plans AI progress
+  planDiff: {},              // {[pid]: {status, stage, result, error, oldId, newId, ts}} — Plan Revision Diff (in-memory, not persisted)
   masterSeeAll: false,       // master-only: reveal all features regardless of active workspace plan
   schedule: {},              // { [pid]: { tasks: [...], phases: [...] } } — Gantt scheduling
   scheduleSelProj: null,     // currently selected project in Schedule tab
@@ -9477,6 +9479,27 @@ function buildBidsModal() {
   const pending = m.pendingKey || (sel ? sel.sid + '|||' + sel.key : null);
   const pdfBids = bids.filter(({bid}) => !!bid.pdfPath);
 
+  // ── Level mode: AI bid leveling sheet ────────────────────────────────────
+  if (mode === 'level') {
+    return `<div class="backdrop" onclick="if(event.target===this){ST.bidsModal=null;render()}">
+      <div class="modal" style="max-width:1200px;width:97vw;max-height:92vh;display:flex;flex-direction:column;padding:18px 20px;overflow:hidden">
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+          <div style="flex:1;min-width:0">
+            <div class="modal-title">⚖ Bid Leveling — ${esc(cat)}</div>
+            <div class="modal-sub">${esc(projName)} · ${bids.length} bids · AI line-by-line scope comparison</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="bidsModalSetMode('list')">← Back</button>
+        </div>
+        <div style="flex:1;overflow-y:auto;min-height:0">
+          ${buildBidLevelingView(pid, projName, cat)}
+        </div>
+        <div class="modal-btns" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <button class="btn btn-ghost" onclick="ST.bidsModal=null;render()">Close</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   // ── Analyze mode: data-driven comparison view ────────────────────────
   if (mode === 'analyze') {
     return `<div class="backdrop" onclick="if(event.target===this){ST.bidsModal=null;render()}">
@@ -9580,6 +9603,7 @@ function buildBidsModal() {
       <div class="modal-btns">
         ${sel?`<button class="btn btn-ghost" style="color:var(--red)" onclick="clearSelectedBid('${pid}','${esc(cat)}');ST.bidsModal=null;render()">Clear selection</button>`:''}
         ${bids.length>0?`<button class="btn btn-ghost btn-sm" onclick="bidsModalSetMode('analyze')">📊 Analyze</button>`:''}
+        ${bids.length>1?`<button class="btn btn-ghost btn-sm" onclick="bidsModalStartLevel()" title="AI compares all bids line-by-line and flags scope gaps">⚖ Level bids (AI)</button>`:''}
         ${bids.length>0?`<button class="btn btn-ghost btn-sm" onclick="bidsModalSetMode('compare')">⇆ Compare PDFs</button>`:''}
         ${bids.length>0?`<button class="btn btn-green btn-sm" onclick="bidsModalConfirmSelect()" ${pending?'':'disabled style=\"opacity:.4;cursor:not-allowed\"'}>✓ SELECT</button>`:''}
         <button class="btn btn-ghost" onclick="ST.bidsModal=null;render()">Close</button>
@@ -9600,6 +9624,229 @@ function bidsModalConfirmSelect() {
   ST.bidsModal = null;
   render();
 }
+// ============================================================
+// BID LEVELING (AI)
+// ============================================================
+// ST.bidLeveling[projName|cat] = { status:'idle'|'running'|'done'|'error', result, error, ts }
+
+function bidLevelKey(projName, cat) { return `${projName}|||${cat}`; }
+function getBidLeveling(projName, cat) {
+  if (!ST.bidLeveling) ST.bidLeveling = {};
+  return ST.bidLeveling[bidLevelKey(projName, cat)] || null;
+}
+
+function bidsModalStartLevel() {
+  const m = ST.bidsModal;
+  if (!m) return;
+  ST.bidsModal.mode = 'level';
+  // If we don't already have a result, kick off the run
+  const existing = getBidLeveling(m.projName, m.cat);
+  if (!existing || existing.status === 'error') {
+    runBidLeveling(m.pid, m.projName, m.cat);
+  }
+  render();
+}
+
+async function runBidLeveling(pid, projName, cat) {
+  if (!ST.bidLeveling) ST.bidLeveling = {};
+  const key = bidLevelKey(projName, cat);
+  const bids = getBidsForProjCat(projName, cat);
+  if (bids.length < 2) {
+    ST.bidLeveling[key] = { status:'error', error:'Need at least 2 bids to level.', ts:Date.now() };
+    render(); return;
+  }
+
+  ST.bidLeveling[key] = { status:'running', stage:'Reading bid PDFs…', result:null, error:null, ts:Date.now() };
+  render();
+
+  try {
+    // Build the payload: download each bid's PDF as base64 (when present)
+    const payloadBids = [];
+    let i = 0;
+    for (const { sub, bid } of bids) {
+      i++;
+      ST.bidLeveling[key].stage = `Reading bid ${i} of ${bids.length}…`;
+      render();
+      let pdfBase64 = null;
+      if (bid.pdfPath) {
+        try {
+          pdfBase64 = await fetchBidPdfBase64(bid.pdfPath);
+        } catch (e) {
+          console.warn('Could not fetch PDF for', sub.company, e);
+        }
+      }
+      payloadBids.push({
+        id: sub.id,
+        company: sub.company,
+        price: Number(bid.price) || 0,
+        discPrice: bid.discPrice ? Number(bid.discPrice) : null,
+        comments: bid.comments || '',
+        pdfBase64,
+      });
+    }
+
+    ST.bidLeveling[key].stage = 'AI is leveling the bids…';
+    render();
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/level-bids`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ category: cat, projectName: projName, bids: payloadBids }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+
+    ST.bidLeveling[key] = { status:'done', result:data, error:null, ts:Date.now() };
+    render();
+  } catch (e) {
+    console.error('runBidLeveling:', e);
+    ST.bidLeveling[key] = { status:'error', error:(e.message||String(e)), result:null, ts:Date.now() };
+    render();
+  }
+}
+
+// Download a stored PDF and return its base64 (no data: prefix)
+async function fetchBidPdfBase64(path) {
+  if (!path) return null;
+  // Offline/data-url bids store the base64 directly
+  if (String(path).startsWith('data:')) {
+    const comma = path.indexOf(',');
+    return comma !== -1 ? path.slice(comma + 1) : null;
+  }
+  const { data, error } = await sb.storage.from(BID_PDF_BUCKET).createSignedUrl(path, 3600);
+  if (error) throw error;
+  const resp = await fetch(data.signedUrl);
+  const blob = await resp.blob();
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result || '';
+      const comma = String(result).indexOf(',');
+      resolve(comma !== -1 ? String(result).slice(comma + 1) : null);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function buildBidLevelingView(pid, projName, cat) {
+  const lev = getBidLeveling(projName, cat);
+  const bids = getBidsForProjCat(projName, cat);
+
+  if (!lev || lev.status === 'idle') {
+    return `<div style="text-align:center;padding:40px 20px">
+      <button class="btn btn-amber" onclick="runBidLeveling('${pid}','${esc(projName)}','${esc(cat)}')">⚖ Run bid leveling</button>
+    </div>`;
+  }
+
+  if (lev.status === 'running') {
+    return `<div style="text-align:center;padding:50px 20px">
+      <div class="rp-spinner" style="margin:0 auto 16px;width:22px;height:22px;border-width:3px"></div>
+      <div style="font-family:var(--sans);font-size:14px;color:var(--text);font-weight:500;margin-bottom:4px">${esc(lev.stage||'Working…')}</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">Reading PDFs and comparing scope — this can take 20-40 seconds.</div>
+    </div>`;
+  }
+
+  if (lev.status === 'error') {
+    return `<div style="padding:30px 20px;text-align:center">
+      <div style="font-family:var(--mono);font-size:11px;color:var(--red);margin-bottom:14px">Leveling failed: ${esc(lev.error||'unknown error')}</div>
+      <button class="btn btn-amber btn-sm" onclick="runBidLeveling('${pid}','${esc(projName)}','${esc(cat)}')">Retry</button>
+    </div>`;
+  }
+
+  // ── DONE — render the leveling sheet ──
+  const r = lev.result || {};
+  const lineItems = Array.isArray(r.lineItems) ? r.lineItems : [];
+  const summaries = Array.isArray(r.bidSummaries) ? r.bidSummaries : [];
+  const matrix = r.matrix || {};
+  const gaps = Array.isArray(r.gaps) ? r.gaps : [];
+  const outliers = Array.isArray(r.outliers) ? r.outliers : [];
+
+  // Map bidId → company (prefer summary, fall back to live bids)
+  const companyOf = {};
+  summaries.forEach(s => { companyOf[s.id] = s.company; });
+  bids.forEach(({sub}) => { if (!companyOf[sub.id]) companyOf[sub.id] = sub.company; });
+  const bidIds = summaries.length ? summaries.map(s => s.id) : bids.map(b => b.sub.id);
+
+  const cellMark = (state) => {
+    if (state === 'included') return `<span style="color:var(--green);font-weight:700">✓</span>`;
+    if (state === 'excluded') return `<span style="color:var(--red);font-weight:700" title="explicitly excluded">✕</span>`;
+    return `<span style="color:var(--amber);font-weight:700" title="not mentioned — risk">?</span>`;
+  };
+
+  // Find lowest/highest totals for highlighting
+  const totals = summaries.map(s => Number(s.total)||0).filter(n=>n>0);
+  const minTotal = totals.length ? Math.min(...totals) : null;
+
+  return `
+    <!-- Recommendation -->
+    ${r.recommendation ? `
+      <div style="background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--r2);padding:14px 16px;margin-bottom:18px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:6px">AI Recommendation${r.confidence?` · ${esc(r.confidence)} confidence`:''}</div>
+        <div style="font-family:var(--sans);font-size:13px;color:var(--ink-900);line-height:1.55">${esc(r.recommendation)}</div>
+      </div>` : ''}
+
+    <!-- Bid summary cards -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
+      ${summaries.map(s => {
+        const isLow = minTotal !== null && Number(s.total)===minTotal;
+        return `<div style="flex:1;min-width:200px;border:1px solid ${isLow?'var(--green)':'var(--border)'};border-radius:var(--r2);padding:12px 14px;background:${isLow?'var(--green-bg)':'var(--bg)'}">
+          <div style="font-family:var(--sans);font-size:13px;font-weight:700;color:var(--ink-900)">${esc(s.company)}${isLow?' <span style="font-family:var(--mono);font-size:8px;color:var(--green)">LOWEST</span>':''}</div>
+          <div style="font-family:var(--mono);font-size:17px;font-weight:700;color:var(--ink-900);margin:4px 0">${s.total?fmt$(s.total):'—'}</div>
+          <div style="font-family:var(--mono);font-size:9px;color:${s.itemized?'var(--text3)':'var(--amber)'}">${s.itemized?'itemized scope':'price only — scope unverified'}</div>
+          ${(s.notableExclusions&&s.notableExclusions.length)?`<div style="margin-top:6px;font-family:var(--mono);font-size:9.5px;color:var(--red)">Excludes: ${s.notableExclusions.map(esc).join(', ')}</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+
+    <!-- Scope matrix -->
+    ${lineItems.length ? `
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Scope comparison · ✓ included · <span style="color:var(--red)">✕</span> excluded · <span style="color:var(--amber)">?</span> not mentioned</div>
+      <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--r2);margin-bottom:18px">
+        <table style="width:100%;border-collapse:collapse;font-family:var(--sans);font-size:12px">
+          <thead>
+            <tr style="background:var(--bg1)">
+              <th style="text-align:left;padding:8px 12px;font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);position:sticky;left:0;background:var(--bg1);min-width:160px">Scope item</th>
+              ${bidIds.map(id => `<th style="padding:8px 10px;font-size:11px;font-weight:600;color:var(--ink-900);white-space:nowrap">${esc(companyOf[id]||'?')}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${lineItems.map((li, idx) => `
+              <tr style="border-top:1px solid var(--border);background:${idx%2?'var(--bg)':'var(--bg1)'}">
+                <td style="padding:7px 12px;color:var(--ink-900);position:sticky;left:0;background:inherit">${esc(li.label)}</td>
+                ${bidIds.map(id => `<td style="padding:7px 10px;text-align:center">${cellMark((matrix[id]||{})[li.label])}</td>`).join('')}
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : ''}
+
+    <!-- Scope gaps -->
+    ${gaps.length ? `
+      <div style="border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:14px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);font-weight:600;margin-bottom:10px">⚠ Scope gaps to clarify</div>
+        ${gaps.map(g => `
+          <div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--ink-900)">
+            <strong>${esc(g.item)}</strong> —
+            <span style="color:var(--green)">in: ${(g.presentIn||[]).map(esc).join(', ')||'—'}</span>;
+            <span style="color:var(--red)">missing/excluded from: ${(g.missingFrom||[]).map(esc).join(', ')||'—'}</span>
+          </div>`).join('')}
+      </div>` : ''}
+
+    <!-- Outliers -->
+    ${outliers.length ? `
+      <div style="border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:10px">Price flags</div>
+        ${outliers.map(o => `
+          <div style="padding:6px 0;font-size:12.5px;color:var(--ink-900)">
+            <strong>${esc(o.company)}</strong>${o.item?` · ${esc(o.item)}`:''} — ${esc(o.note)}
+          </div>`).join('')}
+      </div>` : ''}
+
+    <div style="text-align:right;margin-top:14px">
+      <button class="btn btn-ghost btn-sm" onclick="runBidLeveling('${pid}','${esc(projName)}','${esc(cat)}')">↻ Re-run leveling</button>
+    </div>`;
+}
+
 function bidsModalSetMode(mode) {
   if (!ST.bidsModal) return;
   ST.bidsModal.mode = mode;
@@ -16845,7 +17092,168 @@ function buildReadPlansButton(pid, opts = {}) {
   </div>`;
 }
 
+// ============================================================
+// PLAN REVISION DIFF (AI)
+// ============================================================
+// ST.planDiff[pid] = { status, stage, result, error, oldId, newId, ts } — in-memory
 
+function getPlanDiff(pid) {
+  if (!ST.planDiff) ST.planDiff = {};
+  return ST.planDiff[pid] || null;
+}
+
+async function runPlanDiff(pid) {
+  const e = getEstProj(pid);
+  const oldId = document.getElementById('pdiff-old')?.value || (ST.planDiff?.[pid]?.oldId);
+  const newId = document.getElementById('pdiff-new')?.value || (ST.planDiff?.[pid]?.newId);
+  if (!oldId || !newId) { showToast('Pick both an older and a newer plan.', 'warn'); return; }
+  if (oldId === newId) { showToast('Pick two different plans to compare.', 'warn'); return; }
+
+  const oldPlan = (e.plans || []).find(p => p.id === oldId);
+  const newPlan = (e.plans || []).find(p => p.id === newId);
+  if (!oldPlan?.dataUrl || !newPlan?.dataUrl) {
+    showToast('Both plans need their PDF stored (≤5 MB). Re-upload if needed.', 'warn');
+    return;
+  }
+
+  if (!ST.planDiff) ST.planDiff = {};
+  ST.planDiff[pid] = { status:'running', stage:'Reading both plan sets…', result:null, error:null, oldId, newId, ts:Date.now() };
+  render();
+
+  try {
+    const oldB64 = oldPlan.dataUrl.split(',')[1];
+    const newB64 = newPlan.dataUrl.split(',')[1];
+
+    ST.planDiff[pid].stage = 'AI is comparing revisions…';
+    render();
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/diff-plans`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({
+        oldPlan: { name: oldPlan.name, discipline: oldPlan.discipline, pdfBase64: oldB64 },
+        newPlan: { name: newPlan.name, discipline: newPlan.discipline, pdfBase64: newB64 },
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+
+    ST.planDiff[pid] = { status:'done', result:data, error:null, oldId, newId, ts:Date.now() };
+    render();
+  } catch (e2) {
+    console.error('runPlanDiff:', e2);
+    ST.planDiff[pid] = { status:'error', error:(e2.message||String(e2)), result:null, oldId, newId, ts:Date.now() };
+    render();
+  }
+}
+
+function buildPlanDiffCard(p, e) {
+  const plansWithBin = (e.plans || []).filter(pl => pl.dataUrl);
+  const diff = getPlanDiff(p.id);
+  const running = diff && diff.status === 'running';
+
+  // Need at least 2 plans with binaries to compare
+  const head = `
+    <div class="rp-card-head">
+      <div>
+        <div class="rp-card-title">🔀 Compare plan revisions</div>
+        <div class="rp-card-sub">Claude compares an older plan set against a newer one and lists exactly what changed — sheet by sheet — flagging anything that affects scope or cost.</div>
+      </div>
+    </div>`;
+
+  if (plansWithBin.length < 2) {
+    return `<div class="rp-card" style="background:linear-gradient(135deg,var(--bg1),var(--bg2))">
+      ${head}
+      <div style="font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-top:10px;line-height:1.5">
+        Upload at least 2 plan PDFs (≤5 MB each) — the prior revision and the new one — then compare them here.
+      </div>
+    </div>`;
+  }
+
+  const sel = diff || {};
+  const oldSel = sel.oldId || plansWithBin[0].id;
+  const newSel = sel.newId || plansWithBin[plansWithBin.length-1].id;
+
+  return `<div class="rp-card" style="background:linear-gradient(135deg,var(--bg1),var(--bg2))">
+    ${head}
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:12px">
+      <div style="flex:1;min-width:160px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Older (prior)</div>
+        <select id="pdiff-old" class="minp" style="width:100%">
+          ${plansWithBin.map(pl => `<option value="${pl.id}"${pl.id===oldSel?' selected':''}>${esc(pl.discipline)} · ${esc(pl.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div style="font-family:var(--mono);font-size:14px;color:var(--text3);padding-bottom:6px">→</div>
+      <div style="flex:1;min-width:160px">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Newer (revised)</div>
+        <select id="pdiff-new" class="minp" style="width:100%">
+          ${plansWithBin.map(pl => `<option value="${pl.id}"${pl.id===newSel?' selected':''}>${esc(pl.discipline)} · ${esc(pl.name)}</option>`).join('')}
+        </select>
+      </div>
+      <button class="rp-btn rp-btn-active" ${running?'disabled':''} onclick="runPlanDiff('${p.id}')">
+        ${running ? `<span class="rp-spinner"></span><span>Comparing…</span>` : `<span class="rp-icon">🔀</span><span>Compare</span>`}
+      </button>
+    </div>
+
+    ${diff ? buildPlanDiffResult(p.id, diff) : ''}
+  </div>`;
+}
+
+function buildPlanDiffResult(pid, diff) {
+  if (diff.status === 'running') {
+    return `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--amber-border);text-align:center">
+      <div style="font-family:var(--sans);font-size:13px;color:var(--text);font-weight:500;margin-bottom:3px">${esc(diff.stage||'Working…')}</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">Reading both sets and diffing — 20-40 seconds.</div>
+    </div>`;
+  }
+  if (diff.status === 'error') {
+    return `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--amber-border)">
+      <div style="font-family:var(--mono);font-size:11px;color:var(--red)">Comparison failed: ${esc(diff.error||'unknown')}</div>
+    </div>`;
+  }
+  if (diff.status !== 'done' || !diff.result) return '';
+
+  const r = diff.result;
+  const changes = Array.isArray(r.changes) ? r.changes : [];
+  const sevColor = (s) => s==='high'?'var(--red)':s==='medium'?'var(--amber)':'var(--text3)';
+  const sevBg = (s) => s==='high'?'var(--red-bg)':s==='medium'?'var(--amber-bg)':'var(--bg2)';
+  const typeLabel = (t) => t==='added'?'+ ADDED':t==='removed'?'− REMOVED':'~ MODIFIED';
+
+  // Sort: high severity first
+  const order = { high:0, medium:1, low:2 };
+  const sorted = changes.slice().sort((a,b)=>(order[a.severity]??3)-(order[b.severity]??3));
+
+  return `
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--amber-border)">
+      ${r.summary ? `<div style="font-family:var(--sans);font-size:13px;color:var(--ink-900);line-height:1.5;margin-bottom:10px"><strong>Summary:</strong> ${esc(r.summary)}</div>` : ''}
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-family:var(--mono);font-size:10px;color:var(--text2)">
+        ${r.sheetsOld!=null?`<span class="dlog-tag">Old: ${r.sheetsOld} sheets</span>`:''}
+        ${r.sheetsNew!=null?`<span class="dlog-tag">New: ${r.sheetsNew} sheets</span>`:''}
+        <span class="dlog-tag">${changes.length} change${changes.length===1?'':'s'}</span>
+        ${r.confidence?`<span class="dlog-tag">${esc(r.confidence)} confidence</span>`:''}
+      </div>
+
+      ${sorted.length ? sorted.map(c => `
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border:1px solid var(--border);border-left:3px solid ${sevColor(c.severity)};border-radius:var(--r);margin-bottom:6px;background:var(--bg)">
+          <div style="flex-shrink:0;min-width:54px">
+            <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ink-900)">${esc(c.sheet||'—')}</div>
+            <div style="font-family:var(--mono);font-size:8px;letter-spacing:.06em;color:${sevColor(c.severity)};margin-top:2px">${typeLabel(c.type)}</div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:var(--sans);font-size:12.5px;color:var(--ink-900);line-height:1.45">${esc(c.description||'')}</div>
+            ${c.affectsScope?`<span style="display:inline-block;margin-top:4px;font-family:var(--mono);font-size:8px;letter-spacing:.06em;color:var(--red);background:var(--red-bg);border:1px solid var(--red-border);padding:1px 6px;border-radius:8px">AFFECTS SCOPE</span>`:''}
+          </div>
+          <div style="flex-shrink:0;font-family:var(--mono);font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:${sevColor(c.severity)};background:${sevBg(c.severity)};padding:2px 7px;border-radius:8px;align-self:flex-start">${esc(c.severity||'')}</div>
+        </div>`).join('') : '<div style="font-family:var(--mono);font-size:11px;color:var(--text3)">No changes detected between these two sets.</div>'}
+
+      ${r.recommendation ? `
+        <div style="margin-top:12px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--r);padding:11px 13px">
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:4px">What to do</div>
+          <div style="font-family:var(--sans);font-size:12.5px;color:var(--ink-900);line-height:1.5">${esc(r.recommendation)}</div>
+        </div>` : ''}
+    </div>`;
+}
 
 // ---------- CODE DERIVATION ----------
 
@@ -17200,6 +17608,11 @@ function buildEstPlans(p, e, activeDiscIds) {
           </div>`;
       })()}
     </div>
+
+    <div style="height:14px"></div>
+
+    <!-- Plan Revision Diff -->
+    ${buildPlanDiffCard(p, e)}
 
     <div style="height:22px"></div>
 
