@@ -14584,21 +14584,40 @@ async function wsDelete(wsId) {
   showConfirm(`Permanently delete "${ws.name}"?`, async () => {
     const deletingActive = (wsId === ST.activeWorkspace);
 
-    // ── Try to delete from Supabase (best-effort). We do NOT abort the whole
-    // delete if the cloud part fails — otherwise a Storage/RLS hiccup makes it
-    // look like "delete doesn't work". We surface the real error instead. ──
+    // ── Delete from Supabase and VERIFY it actually worked ──
+    // Masters load workspaces FROM Supabase on login, so if the cloud row
+    // survives (e.g. a missing DELETE policy), the workspace reappears on
+    // reload. We therefore confirm the row is gone before deleting locally.
     let cloudError = null;
     if (AUTH.session && AUTH.isMaster) {
       try {
-        const { error: memErr } = await sb.from('workspace_members').delete().eq('workspace_id', wsId);
-        if (memErr) throw memErr;
+        // Children first (defensive — FKs may or may not cascade)
+        try { await sb.from('workspace_gmail').delete().eq('workspace_id', wsId); } catch(e) { console.warn('gmail cleanup:', e); }
+        try { await sb.from('workspace_members').delete().eq('workspace_id', wsId); } catch(e) { console.warn('members cleanup:', e); }
         try { await sb.from('app_state').delete().eq('workspace_id', wsId); } catch(e) { console.warn('app_state cleanup:', e); }
+
         const { error: wsErr } = await sb.from('workspaces').delete().eq('id', wsId);
         if (wsErr) throw wsErr;
+
+        // VERIFY: re-query. If the row is still there, the delete was blocked
+        // (almost always a missing RLS DELETE policy on the workspaces table).
+        const { data: still, error: checkErr } = await sb
+          .from('workspaces').select('id').eq('id', wsId).maybeSingle();
+        if (checkErr) { /* ignore check error, proceed */ }
+        else if (still) {
+          throw new Error('The workspaces table is blocking deletes (no DELETE policy for your account). Run the SQL I gave you to add a delete policy, then try again.');
+        }
       } catch(e) {
         cloudError = e;
-        console.error('Cloud delete failed (continuing with local delete):', e);
+        console.error('Cloud delete failed:', e);
       }
+    }
+
+    // If the cloud delete failed for a master, do NOT delete locally —
+    // otherwise it looks gone but comes back on reload. Surface the reason.
+    if (cloudError && AUTH.session && AUTH.isMaster) {
+      showToast('Could not delete from cloud: ' + (cloudError.message || cloudError), 'error');
+      return;
     }
 
     // ── Switch away if we're deleting the active workspace ──
@@ -14614,19 +14633,13 @@ async function wsDelete(wsId) {
       }
     }
 
-    // ── Delete locally (this is what the user sees immediately) ──
+    // ── Delete locally ──
     delete ST.workspaces[wsId];
     try { localStorage.removeItem(WS_STATE_PREFIX + wsId); } catch {}
     wsSaveRegistry(ST.workspaces);
     ST.wsSettingsModal = null;
     render();
-
-    if (cloudError) {
-      const msg = (cloudError.message || String(cloudError));
-      showToast(`Removed locally, but the cloud copy may remain (${msg}). It will not reappear on this device.`, 'warn');
-    } else {
-      showToast(`Workspace "${ws.name}" deleted.`, 'success');
-    }
+    showToast(`Workspace "${ws.name}" deleted.`, 'success');
   }, { danger: true, detail: 'All projects, subs, files, and estimates inside it will be erased.' });
 }
 
