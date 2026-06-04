@@ -4203,6 +4203,7 @@ let ST = {
   rfiFilter: 'all',          // 'all' | 'mine' | 'open' | 'answered' | 'closed'
   wsMembers: null,           // cached list of {user_id, email, display_name, role} for assignment
   wsMembersLoading: false,
+  upsellModal: null,         // {reason} — shown when a plan limit (e.g. project cap) is hit
   toScanResult: null,        // last scan result from analyze-plan?mode=scan  // {[accId]: true|false} — open/close state for Plan Sets sub-accordions
   estimatorSuggestDismissed: {},    // {[pid]: [suggestionKey...]} — heuristics already declined
   emailTemplates: null,     // {rfp:{subject,body}, followup:{subject,body}} — loaded from app_state
@@ -4394,7 +4395,7 @@ const DEFAULT_SETTINGS = {
   theme: 'bone',
   defaultMarkup: { None: 0, Materials: 10, Labor: 25, Subcontractor: 15, Equipment: 12, Other: 10 },
   costTypes: [...DEFAULT_COST_TYPES],
-  brand: { wordmark: 'BIDFLOW', subtitle: '', logoData: '', accentColor: '' },
+  brand: { wordmark: 'NOVANTU', subtitle: '', logoData: '', accentColor: '' },
   print: { companyName: '', companyAddress: '', companyPhone: '', companyLicense: '', headerText: '', footerText: '', notes: '', coverPage: false, showGridLines: false, logoOffsetX: 0, logoOffsetY: 0, showLogo: true, logoSize: 'md', logoAlign: 'left', infoAlign: 'left', infoDisplay: 'lines', headerStyle: 'split', rightCorner: 'price', projectNamePrefix: '', layoutStyle: 'standard', fontFamily: 'sans', accentInPdf: true, headerBg: '#000000', pageOrientation: 'portrait' },
   notifs: { newBids: true, pendingCOs: true, dueDateAlerts: true, threadReplies: true },
   kbNavEnabled: true
@@ -4460,7 +4461,7 @@ async function loadSt() {
           ST.followUp = {}; ST.estimates = {}; ST.selProj = null; ST.ovSelProj = null;
           localStorage.setItem('bidflow_fresh_v1', '1');
           saveStLocal();
-          console.log('BIDFLOW fresh-start applied — seed projects hidden, history cleared.');
+          console.log('NOVANTU fresh-start applied — seed projects hidden, history cleared.');
         }
       } catch(e) { console.warn('local load failed', e); }
     }
@@ -6845,16 +6846,16 @@ function threadSetStatus(pid, cat, sid, status) {
 function buildSubPortal() {
   const v = ST.subPortalView;
   const tok = ST.subPortalTokens[v.token];
-  if (!tok) return `<div style="padding:60px 20px;text-align:center;font-family:var(--sans);background:var(--bg);min-height:100vh"><div style="max-width:520px;margin:0 auto"><div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:14px">${esc(getSettings().brand?.wordmark || 'BIDFLOW')} · Sub Portal</div><h1 style="font-size:28px;font-weight:600;margin:0 0 12px">Link expired</h1><p style="color:var(--text2);font-size:14px">Reach out to the sender for a fresh link.</p></div></div>`;
+  if (!tok) return `<div style="padding:60px 20px;text-align:center;font-family:var(--sans);background:var(--bg);min-height:100vh"><div style="max-width:520px;margin:0 auto"><div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:14px">${esc(getSettings().brand?.wordmark || 'NOVANTU')} · Sub Portal</div><h1 style="font-size:28px;font-weight:600;margin:0 0 12px">Link expired</h1><p style="color:var(--text2);font-size:14px">Reach out to the sender for a fresh link.</p></div></div>`;
   const proj = allProjects().find(p => p.id === tok.pid);
   const subs = allSubs();
   const recipientSubs = (tok.recipientSids||[]).map(sid => subs.find(s => s.id === sid)).filter(Boolean);
   const pickedSid = v.pickedSid;
   const pickedSub = pickedSid ? recipientSubs.find(s => s.id === pickedSid) : null;
-  if (v.step === 'done') return `<div style="padding:60px 20px;font-family:var(--sans);background:var(--bg);min-height:100vh"><div style="max-width:520px;margin:0 auto;text-align:center"><div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:14px">BIDFLOW · Sub Portal</div><div style="font-size:42px;color:var(--green);margin-bottom:8px">✓</div><h1 style="font-size:24px;font-weight:600;margin:0 0 10px;color:var(--ink-900)">Bid received</h1><p style="color:var(--text2);font-size:14px;line-height:1.6">Thanks ${esc(pickedSub?.company||'')} — your estimate for <b>${esc(proj?.name||'')}</b> (${esc(tok.cat)}) is in.</p></div></div>`;
+  if (v.step === 'done') return `<div style="padding:60px 20px;font-family:var(--sans);background:var(--bg);min-height:100vh"><div style="max-width:520px;margin:0 auto;text-align:center"><div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:14px">NOVANTU · Sub Portal</div><div style="font-size:42px;color:var(--green);margin-bottom:8px">✓</div><h1 style="font-size:24px;font-weight:600;margin:0 0 10px;color:var(--ink-900)">Bid received</h1><p style="color:var(--text2);font-size:14px;line-height:1.6">Thanks ${esc(pickedSub?.company||'')} — your estimate for <b>${esc(proj?.name||'')}</b> (${esc(tok.cat)}) is in.</p></div></div>`;
   return `<div style="padding:60px 20px;font-family:var(--sans);background:var(--bg);min-height:100vh">
     <div style="max-width:560px;margin:0 auto">
-      <div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:14px">BIDFLOW · Sub Portal</div>
+      <div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:14px">NOVANTU · Sub Portal</div>
       <h1 style="font-size:28px;font-weight:600;margin:0 0 6px;color:var(--ink-900)">Submit your bid</h1>
       <div style="font-family:var(--mono);font-size:12px;color:var(--text3);margin-bottom:24px"><b style="color:var(--ink-900)">${esc(proj?.name||'')}</b> · ${esc(tok.cat)}</div>
       ${(() => { const files = ST.projectFiles[tok.pid] || []; if (!files.length) return ''; return `<div style="border:1px solid var(--border);background:var(--bg);padding:14px 18px;margin-bottom:14px"><div class="modal-label" style="margin-top:0">Project documents</div><div style="display:flex;flex-direction:column;gap:4px">${files.map(f => `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-family:var(--mono);font-size:12px;width:20px;text-align:center">📎</span><div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(f.name)}</div><div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:1px">${Math.round((f.size||0)/1024)} KB</div></div><button onclick="projectFileDownload('${proj.id}','${f.id}')" style="font-family:var(--mono);font-size:11px;color:var(--blue);background:transparent;border:none;text-decoration:underline;cursor:pointer">Download</button></div>`).join('')}</div></div>`; })()}
@@ -6937,7 +6938,7 @@ function buildSettingsTab() {
     <div style="margin-bottom:24px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><div style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)">Email · Send from your Gmail</div><div style="font-family:var(--mono);font-size:10px;color:var(--text3);font-style:italic">Your own connection — emails you send go out from your account.</div></div>
       <div style="border:1px solid var(--border);background:var(--bg);padding:18px 22px">
         <div style="font-family:var(--mono);font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:14px">
-          Connect your Gmail so that when you send RFQs, follow-ups, or client updates from BidFlow, they're delivered from your own address (with replies coming back to you). Your connection is private to your account and stored securely on the server.
+          Connect your Gmail so that when you send RFQs, follow-ups, or client updates from Novantu, they're delivered from your own address (with replies coming back to you). Your connection is private to your account and stored securely on the server.
         </div>
         ${buildGmailConnectSection()}
       </div>
@@ -6945,7 +6946,7 @@ function buildSettingsTab() {
 
     <div style="margin-bottom:24px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><div style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)">Brand</div><div style="font-family:var(--mono);font-size:10px;color:var(--text3);font-style:italic">Resell-ready — wordmark, logo, accent.</div></div>
       <div style="border:1px solid var(--border);background:var(--bg);padding:18px 22px;display:grid;grid-template-columns:1fr 1fr;gap:18px">
-        <div><div class="modal-label">Wordmark</div><input type="text" class="minp" value="${esc(s.brand?.wordmark||'')}" placeholder="BIDFLOW" onblur="settingsSetPath(['brand','wordmark'], this.value)"></div>
+        <div><div class="modal-label">Wordmark</div><input type="text" class="minp" value="${esc(s.brand?.wordmark||'')}" placeholder="NOVANTU" onblur="settingsSetPath(['brand','wordmark'], this.value)"></div>
         <div><div class="modal-label">Subtitle (optional)</div><input type="text" class="minp" value="${esc(s.brand?.subtitle||'')}" placeholder="Estimating Suite" onblur="settingsSetPath(['brand','subtitle'], this.value)"></div>
         <div><div class="modal-label">Accent color</div><div style="display:flex;gap:8px;align-items:center"><input type="color" value="${esc(s.brand?.accentColor||'#c44a2c')}" onchange="settingsSetPath(['brand','accentColor'], this.value)" style="width:48px;height:32px;border:1px solid var(--border);cursor:pointer;padding:0"><input type="text" class="minp" value="${esc(s.brand?.accentColor||'')}" placeholder="#c44a2c" onblur="settingsSetPath(['brand','accentColor'], this.value)" style="flex:1;font-family:var(--mono)">${s.brand?.accentColor ? `<button class="btn btn-ghost btn-sm" onclick="settingsSetPath(['brand','accentColor'], '')">✕</button>` : ''}</div></div>
         <div><div class="modal-label">Logo</div><div style="display:flex;gap:8px;align-items:center">${s.brand?.logoData ? `<img src="${s.brand.logoData}" style="height:32px;border:1px solid var(--border)">` : '<span style="font-family:var(--mono);font-size:11px;color:var(--text3);font-style:italic">No logo</span>'}<button class="btn btn-ghost btn-sm" onclick="settingsUploadLogo()">${s.brand?.logoData?'Replace':'Upload'}</button>${s.brand?.logoData ? `<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="settingsSetPath(['brand','logoData'], '')">Remove</button>` : ''}</div></div>
@@ -7091,7 +7092,7 @@ function settingsExportJson() {
   const all = { overrides:ST.overrides, subOverrides:ST.subOverrides, addedSubs:ST.addedSubs, addedProjects:ST.addedProjects, activityLog:ST.activityLog, followUp:ST.followUp, sentHistory:ST.sentHistory, emailTemplates:ST.emailTemplates, estimates:ST.estimates, estimateTemplates:ST.estimateTemplates, changeOrders:ST.changeOrders, threadNotes:ST.threadNotes, subPortalTokens:ST.subPortalTokens, settings:ST.settings, exportedAt:new Date().toISOString(), schemaVersion:1 };
   const blob = new Blob([JSON.stringify(all, null, 2)], { type:'application/json' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'bidflow-backup-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+  const a = document.createElement('a'); a.href = url; a.download = 'novantu-backup-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
   URL.revokeObjectURL(url);
 }
 function settingsImportJson() {
@@ -7272,7 +7273,7 @@ function cmdItems(query) {
   }
 
   // ── Quick actions ───────────────────────────────────────────────────────
-  push('Add new project', 'action', () => { setTab('projects'); ST.addProjModal = true; render(); }, 'action');
+  push('Add new project', 'action', () => { tryAddProject(); }, 'action');
   push('Add new subcontractor', 'action', () => { setTab('subs'); ST.addSubModal = true; render(); }, 'action');
   push('Bulk edit markup', 'Builder action', () => { const pid = ST.builderSelProj || ST.selProj; if (!pid) { alert('Pick a project in Builder first.'); return; } setTab('builder'); ST.bulkEditDialog = { pid }; render(); }, 'action');
   push('Save estimate as template', 'Builder action', () => { const pid = ST.builderSelProj || ST.selProj; if (!pid) { alert('Pick a project in Builder first.'); return; } setTab('builder'); ST.templateSaveDialog = pid; render(); }, 'action');
@@ -7917,7 +7918,7 @@ function buildOwnerPortal() {
   const v = ST.ownerPortalView;
   const tok = ST.ownerPortalTokens[v.token];
   if (!tok) {
-    return `<div style="padding:60px 20px;text-align:center;font-family:var(--sans);background:var(--bg);min-height:100vh"><div style="max-width:520px;margin:0 auto"><div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:14px">${esc(getSettings().brand?.wordmark || 'BIDFLOW')} · Client Portal</div><h1 style="font-size:28px;font-weight:600;margin:0 0 12px">Link not found</h1><p style="color:var(--text2);font-size:14px;line-height:1.6">This share link is invalid or has been revoked. Contact your project manager.</p></div></div>`;
+    return `<div style="padding:60px 20px;text-align:center;font-family:var(--sans);background:var(--bg);min-height:100vh"><div style="max-width:520px;margin:0 auto"><div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:14px">${esc(getSettings().brand?.wordmark || 'NOVANTU')} · Client Portal</div><h1 style="font-size:28px;font-weight:600;margin:0 0 12px">Link not found</h1><p style="color:var(--text2);font-size:14px;line-height:1.6">This share link is invalid or has been revoked. Contact your project manager.</p></div></div>`;
   }
   // Mark last seen
   tok.lastSeen = new Date().toISOString();
@@ -7947,7 +7948,7 @@ function buildOwnerPortal() {
   return `<div style="font-family:var(--sans);background:var(--bg);min-height:100vh">
     <header style="border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;gap:14px;background:var(--bg)">
       ${brand.logoData ? `<img src="${brand.logoData}" style="height:28px">` : ''}
-      <div><div style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)">${esc(brand.wordmark||'BIDFLOW')} · CLIENT PORTAL</div><div style="font-size:13px;color:var(--ink-900);font-weight:500;margin-top:2px">${esc(pi.companyName||'')}${pi.companyPhone?' · '+esc(pi.companyPhone):''}</div></div>
+      <div><div style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)">${esc(brand.wordmark||'NOVANTU')} · CLIENT PORTAL</div><div style="font-size:13px;color:var(--ink-900);font-weight:500;margin-top:2px">${esc(pi.companyName||'')}${pi.companyPhone?' · '+esc(pi.companyPhone):''}</div></div>
       <span style="flex:1"></span>
       <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Read-only · Signed-in as Client</span>
     </header>
@@ -7985,7 +7986,7 @@ function buildOwnerPortal() {
       </div>` : ''}
 
       <!-- Footer -->
-      <div style="margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--text3);text-align:center;line-height:1.6">Powered by ${esc(brand.wordmark||'BIDFLOW')}${pi.companyName?' · ' + esc(pi.companyName):''}${pi.footerText?'<br>' + esc(pi.footerText):''}</div>
+      <div style="margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--text3);text-align:center;line-height:1.6">Powered by ${esc(brand.wordmark||'NOVANTU')}${pi.companyName?' · ' + esc(pi.companyName):''}${pi.footerText?'<br>' + esc(pi.footerText):''}</div>
     </div>
   </div>`;
 }
@@ -8096,7 +8097,7 @@ function sendMessage(pid, cat, sid, from, text, author) {
   saveSt();
 }
 function buildSubMessagingPanel(pid, cat, sid, ctx) {
-  // ctx: 'team' (from BIDFLOW) | 'sub' (from sub portal)
+  // ctx: 'team' (from NOVANTU) | 'sub' (from sub portal)
   const msgs = getMessages(pid, cat, sid);
   const sub = allSubs().find(s => s.id === sid);
   return `<div style="border:1px solid var(--border);background:var(--bg)">
@@ -8293,7 +8294,7 @@ function buildSidebar() {
   const backdrop = ST.sidebarOpen ? `<div class="sidebar-backdrop" onclick="ST.sidebarOpen=false;render()"></div>` : '';
   return `${backdrop}<aside class="app-sidebar${ST.sidebarOpen?' open':''}">
     <div class="sb-brand">
-      <span class="wm bf-wm">${(getSettings().brand?.wordmark || 'BIDFLOW').split('').map((c,i,a)=>`<span class="lt${i>=Math.ceil(a.length/2)?' accent':''}">${esc(c)}</span>`).join('')}<sup>®</sup></span>
+      <span class="wm bf-wm">${(getSettings().brand?.wordmark || 'NOVANTU').split('').map((c,i,a)=>`<span class="lt${i>=Math.ceil(a.length/2)?' accent':''}">${esc(c)}</span>`).join('')}<sup>®</sup></span>
       <span class="meta">v1.0</span>
     </div>
 
@@ -8346,7 +8347,7 @@ function buildTopBar({recentBids, totalBids, userDisplay}) {
     <button class="hamburger" onclick="event.stopPropagation();ST.sidebarOpen=!ST.sidebarOpen;render()" aria-label="Menu">☰</button>
     ${typeof buildWorkspaceSwitcher === 'function' && ST.activeWorkspace ? buildWorkspaceSwitcher() : ''}
     <div class="tb-crumb">
-      ${(!ST.activeWorkspace) ? `<b class="bf-wm">${(getSettings().brand?.wordmark || 'BIDFLOW').split('').map((c,i,a)=>`<span class="lt${i>=Math.ceil(a.length/2)?' accent':''}">${esc(c)}</span>`).join('')}</b><span class="sep">/</span>` : ''}
+      ${(!ST.activeWorkspace) ? `<b class="bf-wm">${(getSettings().brand?.wordmark || 'NOVANTU').split('').map((c,i,a)=>`<span class="lt${i>=Math.ceil(a.length/2)?' accent':''}">${esc(c)}</span>`).join('')}</b><span class="sep">/</span>` : ''}
       <span>${crumb}</span>
       ${sel ? `<span class="sep">/</span><b>${esc(sel.name||'').toUpperCase()}</b>` : ''}
     </div>
@@ -8425,6 +8426,7 @@ function buildApp() {
       ${ST.dropdown ? buildDropdown() : ''}
       ${ST.bidsModal ? buildBidsModal() : ''}
       ${ST.addProjModal ? buildAddProjModal() : ''}
+      ${ST.upsellModal ? buildUpsellModal() : ''}
       ${ST.addSubModal ? buildAddSubModal() : ''}
       ${ST.editSubModal ? buildEditSubModal() : ''}
       ${ST.followUpModal ? buildFollowUpModal() : ''}
@@ -8469,10 +8471,13 @@ function buildProjectsTab() {
             ${ST.projTagFilter.length ? `<span onclick="ST.projTagFilter=[];render()" style="font-family:var(--mono);font-size:10px;color:var(--text3);cursor:pointer;align-self:center;padding:0 4px">clear ✕</span>` : ''}
           </div>`;
         })()}
-        <button class="add-btn" onclick="ST.addProjModal=true;render()">
+        <button class="add-btn" onclick="tryAddProject()">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           Add new project
         </button>
+        ${isProjectLimited() ? `<div style="font-family:var(--mono);font-size:10px;color:${canAddProject()?'var(--text3)':'var(--plano,#c44a2c)'};padding:2px 2px 8px;letter-spacing:.03em">
+          Trial · ${getProjectCount()}/${getActiveMaxProjects()} project${getActiveMaxProjects()===1?'':'s'} used${canAddProject()?'':' · <span style="color:var(--amber)">upgrade for more</span>'}
+        </div>` : ''}
         <div class="sec-label">Projects (${filtered.length})</div>
         <div class="list-scroll">
           ${filtered.map(p => {
@@ -10126,8 +10131,46 @@ function buildAddProjModal() {
 }
 
 // ============================================================
-// ADD/EDIT SUB MODALS
+// UPSELL MODAL (shown when a plan limit is reached)
 // ============================================================
+function buildUpsellModal() {
+  const max = getActiveMaxProjects();
+  const ws = ST.workspaces?.[ST.activeWorkspace];
+  const planName = ws?.plan ? (getPlanById(ws.plan).name) : 'Trial';
+  // Paid plans to show as upgrade options (exclude trial / free)
+  const paidPlans = SUBSCRIPTION_PLANS.filter(p => p.price > 0);
+  const isMaster = AUTH.isMaster;
+  return `<div class="backdrop" onclick="if(event.target===this){ST.upsellModal=null;render()}">
+    <div class="modal" style="max-width:480px" onclick="event.stopPropagation()">
+      <div style="text-align:center;margin-bottom:6px">
+        <div style="font-size:30px;line-height:1;margin-bottom:12px">🔓</div>
+        <div class="modal-title" style="text-align:center">You've reached your ${planName} limit</div>
+        <div class="modal-sub" style="text-align:center;margin-top:6px">Your current plan includes ${max} project${max===1?'':'s'}. Upgrade to manage your whole pipeline — unlimited projects, plus more tools.</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin:20px 0 8px">
+        ${paidPlans.map(p => `
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border:1px solid var(--border);border-radius:var(--r2);background:var(--bg1)">
+            <div style="flex:1">
+              <div style="font-family:var(--sans);font-weight:700;font-size:14px;color:var(--ink-900)">${p.name} <span style="font-family:var(--mono);font-weight:400;font-size:11px;color:var(--text3)">· unlimited projects</span></div>
+              <div style="font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-top:2px">${esc(p.tagline)}</div>
+            </div>
+            <div style="font-family:var(--sans);font-weight:800;font-size:18px;color:var(--ink-900);white-space:nowrap">$${p.price}<span style="font-family:var(--mono);font-size:11px;font-weight:400;color:var(--text3)">/mo</span></div>
+          </div>`).join('')}
+      </div>
+
+      ${isMaster ? `
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--r);padding:10px 12px;margin:6px 0 4px">
+          You're the master. To upgrade this client, open <strong>Workspace settings → plan</strong> and switch them to a paid plan.
+        </div>` : ''}
+
+      <div class="modal-btns" style="margin-top:16px">
+        <button class="btn btn-ghost" onclick="ST.upsellModal=null;render()">Maybe later</button>
+        <a class="btn btn-amber" href="mailto:kisedaniel@gmail.com?subject=${encodeURIComponent('Upgrade my Novantu plan')}&body=${encodeURIComponent("Hi — I'd like to upgrade my Novantu plan to add more projects.\n\nWorkspace: " + (ws?.name||'') )}" onclick="setTimeout(()=>{ST.upsellModal=null;render()},100)">Contact to upgrade →</a>
+      </div>
+    </div>
+  </div>`;
+}
 function buildAddSubModal() {
   const selectedDiv = ST.addSubDivFilter || '';
   const codesForDiv = selectedDiv ? (DIV_CODES[selectedDiv] || []) : [];
@@ -10578,7 +10621,7 @@ async function estAddPlan(pid) {
       const buf = await f.arrayBuffer();
       const doc = await pdfjsLib.getDocument({ data: buf }).promise;
       if (doc.numPages > 15) {
-        showToast(`This PDF has ${doc.numPages} pages. Bidflow accepts max 15 per file — split it into architectural, structural, MEP, etc. and upload each separately.`, 'error');
+        showToast(`This PDF has ${doc.numPages} pages. Novantu accepts max 15 per file — split it into architectural, structural, MEP, etc. and upload each separately.`, 'error');
         return;
       }
     } catch (err) {
@@ -12447,7 +12490,7 @@ function buildEstTakeoff(p, e) {
         <div class="to-wizard-card">
           <div class="to-wizard-step">[ STEP 1 OF 2 ]</div>
           <div class="to-wizard-title">What are you taking off?</div>
-          <div class="to-wizard-sub">Pick the discipline so BIDFLOW maps measurements to the right unit prices.</div>
+          <div class="to-wizard-sub">Pick the discipline so NOVANTU maps measurements to the right unit prices.</div>
 
           <div class="to-type-grid">
             ${TAKEOFF_TYPES.map(t => `
@@ -12725,20 +12768,31 @@ const FEATURE_GROUPS = [
 ];
 
 // Plans — each defines a price + which feature groups are enabled by default.
+// `maxProjects`: null = unlimited; a number caps how many projects the client
+// can CREATE in that workspace (counts ST.addedProjects, not demo/sample data).
 const SUBSCRIPTION_PLANS = [
+  {
+    id: 'trial', name: 'Trial', price: 0,
+    tagline: 'Try the full estimating workflow — limited to one project',
+    maxProjects: 1,
+    features: { today: true, projects: true, estimator: true, fieldops: false, sendcenter: false, branding: true },
+  },
   {
     id: 'starter', name: 'Starter', price: 150,
     tagline: 'Solo estimators getting organized',
+    maxProjects: null,
     features: { today: true, projects: true, estimator: false, fieldops: false, sendcenter: false, branding: true },
   },
   {
     id: 'pro', name: 'Pro', price: 200,
     tagline: 'Full estimating workflow with AI',
+    maxProjects: null,
     features: { today: true, projects: true, estimator: true, fieldops: true, sendcenter: false, branding: true },
   },
   {
     id: 'enterprise', name: 'Enterprise', price: 300,
     tagline: 'Teams that send & collaborate',
+    maxProjects: null,
     features: { today: true, projects: true, estimator: true, fieldops: true, sendcenter: true, branding: true },
   },
 ];
@@ -12774,6 +12828,54 @@ function hasFeature(featureId) {
   if (f && f.always) return true;
   const feats = getActiveFeatures();
   return feats[featureId] !== false;
+}
+
+// ── Project-count limit (trial gating) ───────────────────────────────────────
+// Resolve how many projects the active workspace may create. null = unlimited.
+function getActiveMaxProjects() {
+  if (AUTH.isMaster && ST.masterSeeAll) return null; // master "see all" = no cap
+  const ws = ST.workspaces?.[ST.activeWorkspace];
+  if (ws) {
+    // explicit per-workspace override wins
+    if (ws.maxProjects === null) return null;
+    if (typeof ws.maxProjects === 'number') return ws.maxProjects;
+    // else derive from plan
+    if (ws.plan) {
+      const p = getPlanById(ws.plan);
+      return (p && p.maxProjects != null) ? p.maxProjects : null;
+    }
+  }
+  return null; // default unlimited
+}
+
+// Count the projects the client has CREATED in this workspace (demo/sample
+// projects from the seed are reference data and don't count against the limit).
+function getProjectCount() {
+  return (ST.addedProjects || []).length;
+}
+
+// Can the active workspace add another project right now?
+function canAddProject() {
+  const max = getActiveMaxProjects();
+  if (max == null) return true;
+  return getProjectCount() < max;
+}
+
+// Is the active workspace on a project-limited plan? (for showing the meter)
+function isProjectLimited() {
+  return getActiveMaxProjects() != null;
+}
+
+// Gatekeeper for opening the "Add project" modal — shows upsell if at the cap.
+function tryAddProject() {
+  if (!canAddProject()) {
+    ST.upsellModal = { reason: 'projects' };
+    render();
+    return;
+  }
+  setTab('projects');
+  ST.addProjModal = true;
+  render();
 }
 
 
@@ -13518,7 +13620,7 @@ ${r.discipline ? 'Discipline: ' + r.discipline + '\n' : ''}${r.dueDate ? 'Needed
 Question:
 ${r.question}
 
-Open BidFlow to answer and keep the thread in one place:
+Open Novantu to answer and keep the thread in one place:
 ${appUrl}
 
 (You'll find it under RFIs → assigned to me.)
@@ -14478,7 +14580,7 @@ function wsHexToRgb(hex) {
 function wsGetActiveWordmark() {
   const ws = ST.workspaces?.[ST.activeWorkspace];
   if (ws?.wordmark) return ws.wordmark;
-  return getSettings().brand?.wordmark || 'BIDFLOW';
+  return getSettings().brand?.wordmark || 'NOVANTU';
 }
 
 function wsGetActiveLogo() {
@@ -14533,7 +14635,7 @@ function wsInit() {
       // Create a default workspace from the existing data
       const ws = wsCreate({
         name: getSettings().brand?.wordmark || 'My Studio',
-        wordmark: getSettings().brand?.wordmark || 'BIDFLOW',
+        wordmark: getSettings().brand?.wordmark || 'NOVANTU',
         accentColor: getSettings().brand?.accentColor || '#c8780f',
         logoData: getSettings().brand?.logoData || '',
         planId: 'enterprise',
@@ -14549,7 +14651,7 @@ function wsInit() {
       // Truly empty: create a starter workspace (your own = full access)
       const ws = wsCreate({
         name: 'My Studio',
-        wordmark: 'BIDFLOW',
+        wordmark: 'NOVANTU',
         accentColor: '#c8780f',
         planId: 'enterprise',
       });
@@ -16164,7 +16266,7 @@ function buildBidComparisonView(pid, projName, cat) {
         </div>
         ${savingsVsCheapest > 0 ? `
           <p class="bcv-insight-line">
-            · Bidflow flags the lowest qualified line. Mixing the best of ${paperRows.length} saves ~${fmt$(savingsVsCheapest)} vs. the cheapest full bid.
+            · Novantu flags the lowest qualified line. Mixing the best of ${paperRows.length} saves ~${fmt$(savingsVsCheapest)} vs. the cheapest full bid.
           </p>
         ` : ''}
       ` : `
@@ -16855,7 +16957,7 @@ function buildOwnerPortalV2() {
     <header class="owner-portal-header">
       ${brand.logoData ? `<img src="${brand.logoData}" class="owner-portal-logo">` : ''}
       <div class="owner-portal-brand">
-        <div class="owner-portal-brand-label">${esc(brand.wordmark||'BIDFLOW')} · Client Portal</div>
+        <div class="owner-portal-brand-label">${esc(brand.wordmark||'NOVANTU')} · Client Portal</div>
         <div class="owner-portal-brand-co">${esc(pi.companyName||'')}${pi.companyPhone?` · ${esc(pi.companyPhone)}`:''}</div>
       </div>
       <span style="flex:1"></span>
@@ -16981,7 +17083,7 @@ function buildOwnerPortalV2() {
       </section>
 
       <footer class="owner-portal-footer">
-        Powered by ${esc(brand.wordmark||'BIDFLOW')}${pi.companyName?` · ${esc(pi.companyName)}`:''}
+        Powered by ${esc(brand.wordmark||'NOVANTU')}${pi.companyName?` · ${esc(pi.companyName)}`:''}
         ${pi.footerText?`<br>${esc(pi.footerText)}`:''}
       </footer>
     </main>
@@ -16992,7 +17094,7 @@ function ownerPortalErrorPage(msg) {
   const brand = getSettings().brand || {};
   return `<div class="owner-portal-error">
     <div class="owner-portal-error-card">
-      <div class="owner-portal-error-brand">${esc(brand.wordmark || 'BIDFLOW')} · Client Portal</div>
+      <div class="owner-portal-error-brand">${esc(brand.wordmark || 'NOVANTU')} · Client Portal</div>
       <h1 class="owner-portal-error-title">Link unavailable</h1>
       <p class="owner-portal-error-msg">${esc(msg)}</p>
       <p class="owner-portal-error-help">Contact your project manager for a new link.</p>
@@ -17031,7 +17133,7 @@ function logError(category, error, context) {
   ERROR_LOG.unshift(entry);
   if (ERROR_LOG.length > ERROR_LOG_MAX) ERROR_LOG.length = ERROR_LOG_MAX;
   if (typeof console !== 'undefined' && console.warn) {
-    console.warn('[BidFlow]', category, error);
+    console.warn('[Novantu]', category, error);
   }
   // Surface genuine runtime errors (not render-boundary ones) so the user can
   // tell us what broke instead of silently doing nothing.
@@ -17152,7 +17254,7 @@ function errorBoundaryExportDiagnostic() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `bidflow-diagnostic-${Date.now()}.json`;
+    a.download = `novantu-diagnostic-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   } catch(e) {
@@ -18957,6 +19059,13 @@ function handleOutsideClick(e) {
 function confirmAddProj() {
   const name = document.getElementById('np-name')?.value?.trim();
   if (!name) return;
+  // Trial / plan project cap
+  if (!canAddProject()) {
+    ST.addProjModal = false;
+    ST.upsellModal = { reason: 'projects' };
+    render();
+    return;
+  }
   const id = 'cp-' + Date.now();
   ST.addedProjects.push({
     id, name,
