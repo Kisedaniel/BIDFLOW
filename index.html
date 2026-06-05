@@ -4636,6 +4636,8 @@ async function loadSt() {
     setSaveStatus('saved');
     // Pull in any sub-portal bids / no-bids / messages submitted since last load
     portalSyncInbox();
+    // Begin live multi-editor sync for the active workspace
+    startWorkspaceSync();
   } catch(e) {
     console.error('Load failed:', e);
     setSaveStatus('error', e.message);
@@ -4699,80 +4701,50 @@ async function flushSave() {
     return;
   }
 
-  // Map each key to its appropriate empty default (so we never send NULL)
-  // — arrays for list-shaped data, objects for keyed maps.
-  const KEY_DEFAULTS = {
-    addedSubs: [],
-    addedProjects: [],
-    activityLog: [],
-    estimateTemplates: [],
-    priceBook: [],
-    scopeTemplates: [],
-    customCategories: [],
-    printTemplates: [],
-    // Everything else defaults to {}
-  };
-  const defaultFor = (k) => KEY_DEFAULTS[k] !== undefined ? KEY_DEFAULTS[k] : {};
+  const ws = ST.activeWorkspace;
+  const dirty = [...SAVE_STATE.pendingKeys];
+  SAVE_STATE.pendingKeys.clear();
+
+  // ── Merge-on-save ─────────────────────────────────────────────────────
+  // Re-fetch the latest remote value for each dirty key, then merge OUR
+  // changes (vs baseline) on top. This keeps two editors who touched
+  // different records in the same domain from overwriting one another.
+  let remoteMap = {};
+  try {
+    const { data: remoteRows, error: fErr } = await sb.from('app_state').select('key,value').eq('workspace_id', ws).in('key', dirty);
+    if (fErr) throw fErr;
+    (remoteRows || []).forEach(r => { remoteMap[r.key] = r.value; });
+  } catch (e) {
+    console.warn('Merge pre-fetch failed — saving local as-is:', e.message);
+    remoteMap = {}; // degrade gracefully to last-write-wins
+  }
 
   const rows = [];
-  const skipped = [];
-  for (const k of SAVE_STATE.pendingKeys) {
-    let v;
-    if (k === 'overrides') v = ST.overrides;
-    else if (k === 'subOverrides') v = ST.subOverrides;
-    else if (k === 'addedSubs') v = ST.addedSubs;
-    else if (k === 'addedProjects') v = ST.addedProjects;
-    else if (k === 'activityLog') v = ST.activityLog;
-    else if (k === 'followUp') v = ST.followUp;
-    else if (k === 'sentHistory') v = ST.sentHistory;
-    else if (k === 'email_templates') v = ST.emailTemplates;
-    else if (k === 'estimates') v = ST.estimates;
-    else if (k === 'estimateTemplates') v = ST.estimateTemplates;
-    else if (k === 'priceBook') v = ST.priceBook;
-    else if (k === 'scopeTemplates') v = ST.scopeTemplates;
-    else if (k === 'changeOrders') v = ST.changeOrders;
-    else if (k === 'threadNotes') v = ST.threadNotes;
-    else if (k === 'subPortalTokens') v = ST.subPortalTokens;
-    else if (k === 'settings') v = ST.settings;
-    else if (k === 'ownerPortalTokens') v = ST.ownerPortalTokens;
-    else if (k === 'projectFiles') v = ST.projectFiles;
-    else if (k === 'subMessages') v = ST.subMessages;
-    else if (k === 'estimateVersions') v = ST.estimateVersions;
-    else if (k === 'customCategories') v = ST.customCategories;
-    else if (k === 'printTemplates') v = ST.printTemplates;
-    else if (k === 'estimator') v = ST.estimator;
-    else if (k === 'bidStages') v = ST.bidStages;
-    else if (k === 'toCalculator') v = ST.toCalculator;
-    else if (k === 'schedule') v = ST.schedule;
-    else if (k === 'dailyLogs') v = ST.dailyLogs;
-    else if (k === 'bidLeveling') v = ST.bidLeveling;
-    else if (k === 'planDiff') v = ST.planDiff;
-    else if (k === 'rfis') v = ST.rfis;
-
-    // Critical: app_state.value is NOT NULL. Substitute appropriate empty default.
-    if (v === undefined || v === null) {
-      v = defaultFor(k);
-      skipped.push(k);
-    }
-    rows.push({ workspace_id: ST.activeWorkspace, key: k, value: v });
+  for (const k of dirty) {
+    let local = getStateKey(k);
+    if (local === undefined || local === null) local = appStateDefault(k);
+    const hasRemote = Object.prototype.hasOwnProperty.call(remoteMap, k);
+    const remote = hasRemote ? remoteMap[k] : local;
+    const base = (SYNC.baseline[k] !== undefined) ? SYNC.baseline[k] : (hasRemote ? remoteMap[k] : local);
+    let merged = merge3(base, local, remote);
+    // Critical: app_state.value is NOT NULL — substitute an appropriate empty default.
+    if (merged === undefined || merged === null) merged = appStateDefault(k);
+    // Reflect the merged union locally so this editor immediately sees collaborators' records.
+    assignStateKey(k, merged);
+    SYNC.baseline[k] = deepClone(merged);
+    rows.push({ workspace_id: ws, key: k, value: merged });
   }
-
-  if (skipped.length > 0) {
-    console.log('flushSave: substituted empty defaults for null/undefined keys:', skipped);
-  }
-
-  const keysToFlush = [...SAVE_STATE.pendingKeys];
-  SAVE_STATE.pendingKeys.clear();
 
   try {
     setSaveStatus('saving');
     const { error } = await sb.from('app_state').upsert(rows, { onConflict: 'workspace_id,key' });
     if (error) throw error;
     setSaveStatus('saved');
+    scheduleIdleRender(); // surface any records merged in from collaborators
   } catch(e) {
     console.error('Save failed:', e);
     setSaveStatus('error', e.message);
-    keysToFlush.forEach(k => SAVE_STATE.pendingKeys.add(k));
+    dirty.forEach(k => SAVE_STATE.pendingKeys.add(k));
   }
 }
 
@@ -4783,6 +4755,220 @@ window.addEventListener('beforeunload', (e) => {
     e.returnValue = 'Unsaved changes — please wait a moment';
   }
 });
+
+// ============================================================
+// LIVE WORKSPACE SYNC (multi-editor) — Supabase Realtime + 3-way merge
+// ------------------------------------------------------------
+// Lets several people edit the same workspace at once. Each top-level
+// app_state key is a JSON blob; on save we re-fetch the latest remote
+// value and merge OUR changes (vs a baseline) on top, so editors who
+// touched different records in the same domain don't clobber each other.
+// Realtime pushes others' changes into our local state live.
+// Remaining limitation: two people editing the *same* record at the same
+// time = last-writer-wins on that record.
+// ============================================================
+const SYNC = { baseline: {}, channel: null, renderTimer: null };
+
+// Maps an app_state key → the ST property that holds it (mirrors flushSave).
+const APP_STATE_KEYS = {
+  overrides: 'overrides', subOverrides: 'subOverrides', addedSubs: 'addedSubs', addedProjects: 'addedProjects',
+  activityLog: 'activityLog', followUp: 'followUp', sentHistory: 'sentHistory', email_templates: 'emailTemplates',
+  estimates: 'estimates', estimateTemplates: 'estimateTemplates', priceBook: 'priceBook', scopeTemplates: 'scopeTemplates',
+  changeOrders: 'changeOrders', threadNotes: 'threadNotes', subPortalTokens: 'subPortalTokens', settings: 'settings',
+  ownerPortalTokens: 'ownerPortalTokens', projectFiles: 'projectFiles', subMessages: 'subMessages',
+  estimateVersions: 'estimateVersions', customCategories: 'customCategories', printTemplates: 'printTemplates',
+  estimator: 'estimator', bidStages: 'bidStages', toCalculator: 'toCalculator', schedule: 'schedule',
+  dailyLogs: 'dailyLogs', bidLeveling: 'bidLeveling', planDiff: 'planDiff', rfis: 'rfis',
+};
+const APP_STATE_DEFAULTS = { addedSubs: [], addedProjects: [], activityLog: [], estimateTemplates: [], priceBook: [], scopeTemplates: [], customCategories: [], printTemplates: [] };
+function appStateDefault(k) { return APP_STATE_DEFAULTS[k] !== undefined ? deepClone(APP_STATE_DEFAULTS[k]) : {}; }
+function getStateKey(k) { return APP_STATE_KEYS[k] ? ST[APP_STATE_KEYS[k]] : undefined; }
+function assignStateKey(k, v) { if (APP_STATE_KEYS[k]) ST[APP_STATE_KEYS[k]] = v; }
+
+function deepClone(x) { return (x === null || x === undefined) ? x : JSON.parse(JSON.stringify(x)); }
+function isPlainObj(x) { return x && typeof x === 'object' && !Array.isArray(x); }
+function deepEqual(a, b) {
+  if (a === b) return true;
+  if (typeof a !== typeof b) return false;
+  if (a && b && typeof a === 'object') {
+    const aArr = Array.isArray(a), bArr = Array.isArray(b);
+    if (aArr !== bArr) return false;
+    if (aArr) { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (!deepEqual(a[i], b[i])) return false; return true; }
+    const ka = Object.keys(a), kb = Object.keys(b);
+    if (ka.length !== kb.length) return false;
+    for (const k of ka) { if (!Object.prototype.hasOwnProperty.call(b, k)) return false; if (!deepEqual(a[k], b[k])) return false; }
+    return true;
+  }
+  return false;
+}
+
+// 3-way merge: apply (local - base) on top of remote. Shape-agnostic.
+//  - objects: merge key-by-key (records keyed by id) → union, per-record last-writer-wins
+//  - arrays of {id,...}: merge by id → union, per-item last-writer-wins
+//  - other arrays / scalars: if we changed it, our value wins; else remote's
+function merge3(base, local, remote) {
+  if (deepEqual(local, base)) return deepClone(remote);   // we didn't change it
+  if (deepEqual(remote, base)) return deepClone(local);   // only we changed it
+  // both changed:
+  if (isPlainObj(base) && isPlainObj(local) && isPlainObj(remote)) {
+    const out = deepClone(remote);
+    const keys = new Set([...Object.keys(base), ...Object.keys(local), ...Object.keys(remote)]);
+    for (const k of keys) {
+      const inB = Object.prototype.hasOwnProperty.call(base, k);
+      const inL = Object.prototype.hasOwnProperty.call(local, k);
+      const inR = Object.prototype.hasOwnProperty.call(remote, k);
+      if (inL && !inB) { out[k] = deepClone(local[k]); }                 // we added k
+      else if (!inL && inB) { if (inR && deepEqual(remote[k], base[k])) delete out[k]; } // we deleted k (only if remote didn't touch)
+      else if (inL && inB) { out[k] = merge3(base[k], local[k], inR ? remote[k] : base[k]); } // recurse
+      // (only-in-remote keys stay from the remote clone)
+    }
+    return out;
+  }
+  if (Array.isArray(base) && Array.isArray(local) && Array.isArray(remote)) {
+    const allIded = a => a.length === 0 || a.every(e => isPlainObj(e) && 'id' in e);
+    if (allIded(base) && allIded(local) && allIded(remote)) {
+      const toMap = a => { const m = {}; a.forEach(e => { m[e.id] = e; }); return m; };
+      const mergedMap = merge3(toMap(base), toMap(local), toMap(remote));
+      const order = [], seen = new Set();
+      remote.forEach(e => { if (mergedMap[e.id] !== undefined && !seen.has(e.id)) { order.push(e.id); seen.add(e.id); } });
+      local.forEach(e => { if (mergedMap[e.id] !== undefined && !seen.has(e.id)) { order.push(e.id); seen.add(e.id); } });
+      Object.keys(mergedMap).forEach(id => { if (!seen.has(id)) { order.push(id); seen.add(id); } });
+      return order.map(id => mergedMap[id]);
+    }
+    return deepClone(local); // non-id array we changed → our version wins
+  }
+  return deepClone(local); // scalar/type-mismatch we changed → our version wins
+}
+
+function snapshotBaselines() {
+  SYNC.baseline = {};
+  for (const k in APP_STATE_KEYS) {
+    const v = getStateKey(k);
+    SYNC.baseline[k] = (v === undefined || v === null) ? appStateDefault(k) : deepClone(v);
+  }
+}
+
+// A remote app_state row changed (another editor saved). Re-base our local edits on it.
+function handleRemoteStateChange(payload) {
+  const row = payload && (payload.new || payload.record);
+  if (!row || !row.key) return;
+  const k = row.key;
+  if (!(k in APP_STATE_KEYS)) return;
+  const remote = row.value;
+  if (SYNC.baseline[k] !== undefined && deepEqual(remote, SYNC.baseline[k])) return; // our own echo / no-op
+  let local = getStateKey(k); if (local === undefined || local === null) local = appStateDefault(k);
+  const base = (SYNC.baseline[k] !== undefined) ? SYNC.baseline[k] : local;
+  const merged = merge3(base, local, remote);
+  assignStateKey(k, merged);
+  SYNC.baseline[k] = deepClone(remote);
+  scheduleIdleRender();
+}
+
+function wsRealtimeUnsubscribe() {
+  if (SYNC.channel) { try { sb.removeChannel(SYNC.channel); } catch (e) {} SYNC.channel = null; }
+}
+function wsRealtimeSubscribe() {
+  if (!AUTH.session || !ST.activeWorkspace || !sb || !sb.channel) return;
+  wsRealtimeUnsubscribe();
+  const ws = ST.activeWorkspace;
+  try {
+    SYNC.channel = sb.channel('app_state_' + ws)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state', filter: 'workspace_id=eq.' + ws }, (payload) => {
+        try { handleRemoteStateChange(payload); } catch (e) { console.warn('sync handler error', e); }
+      })
+      .subscribe((status) => { if (status === 'SUBSCRIBED') console.log('Live sync active for workspace', ws); });
+  } catch (e) { console.warn('Realtime subscribe failed:', e); }
+}
+function startWorkspaceSync() { snapshotBaselines(); wsRealtimeSubscribe(); presenceSubscribe(); }
+
+// ============================================================
+// LIVE PRESENCE — who else is in this workspace right now, and where
+// (Supabase Realtime Presence; ephemeral, needs no DB table.)
+// ============================================================
+const PRESENCE = { channel: null, timer: null, lastView: null };
+function presenceMe() {
+  const u = AUTH.user || (AUTH.session && AUTH.session.user) || {};
+  return { uid: u.id || u.email || 'me', name: (u.user_metadata && u.user_metadata.display_name) || (u.email ? u.email.split('@')[0] : 'User') };
+}
+function presenceViewLabel() {
+  const M = { today: 'Today', overview: 'Overview', projects: 'Projects', subs: 'Subs', files: 'Files', builder: 'Take-off', settings: 'Settings', insights: 'Insights', estimator: 'Estimator', schedule: 'Schedule', dailylog: 'Daily log', rfis: 'RFIs' };
+  return M[ST.tab] || 'Overview';
+}
+function presenceColor(key) {
+  let h = 0; const s = String(key); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+  return `hsl(${h},52%,42%)`;
+}
+function presenceInitials(name) {
+  const parts = String(name || 'U').trim().split(/\s+/).slice(0, 2);
+  return parts.map(p => p[0] ? p[0].toUpperCase() : '').join('') || 'U';
+}
+function presenceRender(state) {
+  const meId = presenceMe().uid;
+  const myView = presenceViewLabel();
+  const others = [];
+  Object.keys(state || {}).forEach(k => {
+    if (k === meId) return;
+    const metas = state[k]; const m = metas && metas[metas.length - 1];
+    if (m) others.push({ key: k, name: m.name || 'User', view: m.view || '' });
+  });
+  let bar = document.getElementById('presence-bar');
+  if (others.length === 0) { if (bar) bar.style.display = 'none'; return; }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'presence-bar';
+    bar.style.cssText = 'position:fixed;top:10px;right:14px;z-index:60;display:flex;align-items:center;gap:6px;background:rgba(250,248,242,.96);border:1px solid #d8cfba;border-radius:999px;padding:4px 10px 4px 7px;box-shadow:0 2px 12px rgba(0,0,0,.10);font-family:system-ui,-apple-system,sans-serif;backdrop-filter:saturate(1.1)';
+    document.body.appendChild(bar);
+  }
+  bar.style.display = 'flex';
+  const cap = 4, shown = others.slice(0, cap), extra = others.length - shown.length;
+  bar.innerHTML =
+    '<span style="font-family:ui-monospace,monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#8a857a">Live</span>' +
+    shown.map(o => {
+      const same = o.view && o.view === myView;
+      return `<span title="${esc(o.name)}${o.view ? ' · ' + esc(o.view) : ''}${same ? ' (same screen as you)' : ''}" style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:${presenceColor(o.key)};color:#fff;font-size:11px;font-weight:700;${same ? 'box-shadow:0 0 0 2px #faf8f2,0 0 0 4px #c8780f;' : ''}">${esc(presenceInitials(o.name))}</span>`;
+    }).join('') +
+    (extra > 0 ? `<span style="font-family:ui-monospace,monospace;font-size:11px;color:#3a352d;padding:0 2px">+${extra}</span>` : '');
+}
+function presenceSubscribe() {
+  presenceUnsubscribe();
+  if (!AUTH.session || !ST.activeWorkspace || !sb || !sb.channel) return;
+  const me = presenceMe(); const ws = ST.activeWorkspace;
+  try {
+    PRESENCE.channel = sb.channel('presence_' + ws, { config: { presence: { key: me.uid } } });
+    PRESENCE.channel.on('presence', { event: 'sync' }, () => {
+      try { presenceRender(PRESENCE.channel.presenceState()); } catch (e) {}
+    });
+    PRESENCE.channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        PRESENCE.lastView = presenceViewLabel();
+        try { await PRESENCE.channel.track({ name: me.name, view: PRESENCE.lastView, at: Date.now() }); } catch (e) {}
+        if (PRESENCE.timer) clearInterval(PRESENCE.timer);
+        PRESENCE.timer = setInterval(() => {
+          if (!PRESENCE.channel) return;
+          const v = presenceViewLabel();
+          if (v !== PRESENCE.lastView) { PRESENCE.lastView = v; const m = presenceMe(); try { PRESENCE.channel.track({ name: m.name, view: v, at: Date.now() }); } catch (e) {} }
+        }, 2500);
+      }
+    });
+  } catch (e) { console.warn('Presence subscribe failed:', e); }
+}
+function presenceUnsubscribe() {
+  if (PRESENCE.timer) { clearInterval(PRESENCE.timer); PRESENCE.timer = null; }
+  if (PRESENCE.channel) { try { PRESENCE.channel.untrack(); sb.removeChannel(PRESENCE.channel); } catch (e) {} PRESENCE.channel = null; }
+  const bar = document.getElementById('presence-bar'); if (bar) bar.style.display = 'none';
+}
+
+// Re-render after collaborators' changes are merged — but never while the user is typing.
+function scheduleIdleRender() {
+  if (SYNC.renderTimer) clearTimeout(SYNC.renderTimer);
+  SYNC.renderTimer = setTimeout(() => {
+    SYNC.renderTimer = null;
+    const ae = document.activeElement;
+    const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable);
+    if (typing) { scheduleIdleRender(); return; }
+    try { render(); } catch (e) {}
+  }, 300);
+}
 
 // ============================================================
 // AUTH
@@ -4903,6 +5089,9 @@ async function doLogin(email, password) {
 async function doLogout() {
   if (!confirm('Sign out?')) return;
   // Clear in-memory workspace state so next login fetches fresh memberships
+  wsRealtimeUnsubscribe();
+  presenceUnsubscribe();
+  SYNC.baseline = {};
   ST.activeWorkspace = null;
   AUTH.isMaster = false;
   AUTH.workspaceMemberships = [];
@@ -15106,6 +15295,8 @@ function wsLoadWorkspaceData(wsId) {
   }
   // Pull this workspace's sub-portal submissions / messages from the server
   portalSyncInbox(wsId);
+  // Re-bind live multi-editor sync to the newly active workspace
+  startWorkspaceSync();
 }
 
 // Generate a new workspace ID
