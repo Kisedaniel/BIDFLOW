@@ -9,454 +9,14 @@
 
 
 
-<title>Breakform Bidding Manager</title>
-<link rel="icon" type="image/png" sizes="64x64" href="data:image/png;base64,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">
-<link rel="apple-touch-icon" href="data:image/png;base64,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/Xi167vmIKnrdXWimQaEUgpSSllUVKQeeOCBB9atW/daOBymunZ2hHeoTgrt1Tyhptuyvp/h5SBplptk3c6PhpwRTuQYioqKzps1a9aNzFyrOtZKKbYsK8zMYfdrbQ6llHtue/hMNQkers8BIKyUqr5X27bDtm3XabeKEcukRVWoodu65A7QM5gwboF217YVjWG3uwNKCEEVFRXhkpKS5wF8VlhY+OHZbuuKi4szu3btaiYlJcHn8yFywak2JksoFMKxY8fgRfho5HWZGe3btzfrIx417XHTNOH3+zs3S0JHdkCE6iqllA3AlFLCMAwwM0KhEPx+P1JSUsDMOH78OA4dOgSfzyeklAiHw7Asy43fFVJKGUmQmrsxvOh85xrEzGL16tVYsGDBH4goJz8//yf/Nz8/nwGgdevWB3v16jVv0KBB3Lp1a3JCWs8almWJxMREtXv37vSjR4/eiKq9l9KLflFK4ZxzzuELL7xwvlLqhG3b5MGueRZCUHJycmmEGJ39fZ3l30mnIT4AcIlXjVKb0es0YPXn9unTB5WVld927tz5s2uvvdZo167d3tzc3HtSU1PFddddpwDg4MGDcvny5fbLL788x7KsES+99JK1f//+Hm3atDn3/fffd8lqCyFETZeaqz71VXJ3UDiuSZWRkSHeeeedgUT0qRNh2Fgz4okA/oGq3TimV0LTv39/9cUXX0iv8k/X+75igdBSSliWxfHx8TRw4EAkJye/cfnll781f/78rUT0SS1Vs9vOnTsnPf300+klJSUz1q9fj/LycpfYMtKNWF+Fjvx/Z4CEk5KS5N133/3anXfeed1TTz31s7EezEwzZ840du7cWad7OHz4sNG5c2fro48+mqqUet5rQvfp00eNHz/+nK1bt5ZWVFSQ3+/3ZIA+9NBDPHr06Jjb9X02VZYsAJyWlsZ33nnn//3www+HRG70zMzMNLKzs6Uz0aIzHe7v3QKUzqsczHzec889tz4jI0MlJCQwACty/yE82h3tXs/Ztxi+9tpry5l5FPDvxDgNiNPycsDjXd99+/a1A4FA1OTliFpCO2S2hRCcm5tr79ixY17kDeXm5pp12cHMzFRQUGBGNv4333wzZurUqct69erFACod4nlObOeZwikpKTx9+vQJzHzaINOEbqaEdgpDhnr27MkLFix4k5k7uGrs7Ib2pOGYmdxy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">
+<title>NOVANTU — Estimating &amp; Take-offs</title>
+<meta name="theme-color" content="#FAF8F2">
+<link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA7UlEQVR42mM84qXzn2EAARPDAINRB4w6YMAdwIJN0GzdMRT+qSArsi1ANgubOaNRwEJIAXKwIQfn05VzGZ6unItV7kpxPMO3+7dpGwKS/lEMrILCAxcFTBycDDJR6QObBkSdvBi4FFQGMBEyMjHIJeQOjAP+fv/GwMDAwMCnZ8ogYGRJfwc8Wz0fzpaNz6G/Az5ePMXw/uRBBgYGBgZOWcWBSQOP5k9i+Pf718Alwp+vnjM8X79kYIvi5+sWM/x8/WLgHPDv10+Gxwsm0a4uMFt3DF4f4KqW3x0/QHaVPVodM452TEYdMOqAgXYAAJBoRDStjp4kAAAAAElFTkSuQmCC">
+<link rel="icon" type="image/png" sizes="512x512" href="data:image/png;base64,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">
+<link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAFWElEQVR42u3da2jVdRzH8e/ZjptTmzZ1zctmJYQPVMLEMEEMCUVKclRKmWnDCBTFngY9L8siirwkpklChugDhRIyyjSkCxZihdTcvOS83y+79aB6FINt55Cn33m9wCc6/hw/5+2Pc87Ojpm9s8Z2BiSixAQIGgQNggZBI2gQNAgaBA2CRtAgaBA0CBoEjaBB0CBoEDQIGkGDoEHQIGgQNIIGQYOgQdAgaAQNggZBg6BB0AgaBA2Chh7LFsoNmbRtX87XOFD/kHv0Nu1fKNs7ofGQAwQNggZBU8SyhX4DvXJRWDvn49UoJzQIGkGDoEHQIGgQNIIGQYOgQdDQpWwx/qXz9X6EtksX4uCSp6L96pW83r4RcxtixNyGvFyr2N4L44TO5TSoHBQj5y02hKDTUT2zPipq7zGEoNOQKS2NUQ0rDCHodFSOnxhVk6cZQtDpqF24LErKyg0h6DSUD62JYXPmG0LQ6Rg2Z36UD60xhKATGbOsPGoXLjOEoNNRNXlaVI57wBCCTseohhWRKS01hKDTUFF3b1TPrDeEoNMxct7iyFYOMoSg01Daf0DUzn/REIJOx9Dpj0b/0WMMIehEZEr+ep9HJmMLQadhwJhxMWTqDEMIOh21C5ZEad8KQwg6DX3uHBzDn1xkCEGno+axudF3eJ0hBJ3I88Nsnxj1/HJDCDodAydMjkETpxhC0OmoW7Q8Mtk+hhB0GvoOGxk1s+cZQtDpGP7EwiirGmIIQaehtG9F1C5YYghBp2Pw1BkxYMx4Qwg6HXcvfiki4y74R3Z8879+9fgaZrx9+t1zX1Q/MjtaPtsu5vHN0fZjbbd/3wldoEY+/UJkB9wh5i6ibfuxtkcntaBz0NF6K/c7s3JQjPCBjx5DF4LTu3dE26ULOV+nemZ99Bs12unchZ6c0tnePPDujZ48Dvq/aLt8KZo2vRv3Ln05p+tkSkqirmFF/PzK0qTD7c2f9fTrnNA5OvP5zrh86Iecr1M5dkJUTZlu0Fz/4aR4cv7XGtesjLGrNub8Ho2655bGhW+/TnKjrjrr7qsY3f06J3QeXD/WGCd3fJTzdcqG3BXD658tqu268/i4Jy/dCTpPTmz9IG6eOpHzdWoefybKq4cZtJcEnScdt25G47o3cr9D+pTFkGkzndK9OJ0jfKcwry5+vz/O7d8TVZMfzu1CRfjt8K6i7ulzPEHnWdP6N2Pg/Q9GaUU/Y+TpiaOHHLfRrXNn4viWtYbwGDodp3Z9Eld/+8UQgk5DZ0dHNK5+LaKzwxiCTsPVI4ej5dPthhB0Opo3r47WC2cNIeg0tF+7Ek0b3jaEoNNx9qvdcfHgAUMIOh1H176elx8GQNAF4cbJY3Fy24eGEHQ6TmzbFDdONBlC0GnobG2NxjUrDSHodFz66bs4++WnhhB0Opo2vB3tV68YQtBpaL14Ppo3v2cIQaej5bMdceXXQ4YQdCrPEDuicfWr0dnhzUuCTsS1xiNxaufHhhB0Oo5vWRe3zrYYQtBpaL9xPY6uf8sQgk7H+W++SPbDZQRdpI6+vyo6bt4whKDTcLPlZBzfusEQgk7HHzu2xPXm3w0h6DR0trf9/YO1ncYQdBouHz4Yp/fsMoSg09G88Z28/K8AxaooPwrsQP1DBXvb2i5fjO8XzlKmExoEjaBB0CBoEDSCBkGDoEHQIGiKU8G/l2PStn3d/tpCfo9GSjs7oUHQIGgEDYKGgpTZO2usn8rECQ2CBkGDoBE0CBoEDYIGQSNoEDQIGgQNgkbQIGgQNAgaBI2gQdAgaBA0CBpBg6BB0CBoEDSCBkGDoEHQIGgEDYIGQYOgKWJ/Atb9QDAfHxuiAAAAAElFTkSuQmCC">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<style>/* vietnamese */
-@font-face {
-  font-family: 'Fraunces';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("41d9f1ad-fbe9-47e9-8040-6141f342cfa6") format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'Fraunces';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("60ab1335-cc39-435f-a59b-a341e677605b") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'Fraunces';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("2549c057-885d-4267-aeef-d84da46cf825") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'Fraunces';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("41d9f1ad-fbe9-47e9-8040-6141f342cfa6") format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'Fraunces';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("60ab1335-cc39-435f-a59b-a341e677605b") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'Fraunces';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("2549c057-885d-4267-aeef-d84da46cf825") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* cyrillic-ext */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url("534d78cc-a321-4d70-831a-c8f39695baaa") format('woff2');
-  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
-}
-/* cyrillic */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url("368f2a86-80bb-4918-a928-39dca110dc31") format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url("f97a15f9-5292-4907-aac7-5feeb84c1d38") format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url("65e133f2-b693-4af4-85cd-cd225e103101") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url("1bdfee24-5557-45f7-8f37-48b94f1a1156") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* cyrillic-ext */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("534d78cc-a321-4d70-831a-c8f39695baaa") format('woff2');
-  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
-}
-/* cyrillic */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("368f2a86-80bb-4918-a928-39dca110dc31") format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("f97a15f9-5292-4907-aac7-5feeb84c1d38") format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("65e133f2-b693-4af4-85cd-cd225e103101") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("1bdfee24-5557-45f7-8f37-48b94f1a1156") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* cyrillic-ext */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("534d78cc-a321-4d70-831a-c8f39695baaa") format('woff2');
-  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
-}
-/* cyrillic */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("368f2a86-80bb-4918-a928-39dca110dc31") format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("f97a15f9-5292-4907-aac7-5feeb84c1d38") format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("65e133f2-b693-4af4-85cd-cd225e103101") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("1bdfee24-5557-45f7-8f37-48b94f1a1156") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* cyrillic-ext */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("534d78cc-a321-4d70-831a-c8f39695baaa") format('woff2');
-  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
-}
-/* cyrillic */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("368f2a86-80bb-4918-a928-39dca110dc31") format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("f97a15f9-5292-4907-aac7-5feeb84c1d38") format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("65e133f2-b693-4af4-85cd-cd225e103101") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("1bdfee24-5557-45f7-8f37-48b94f1a1156") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* cyrillic-ext */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("534d78cc-a321-4d70-831a-c8f39695baaa") format('woff2');
-  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
-}
-/* cyrillic */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("368f2a86-80bb-4918-a928-39dca110dc31") format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("f97a15f9-5292-4907-aac7-5feeb84c1d38") format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("65e133f2-b693-4af4-85cd-cd225e103101") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'Geist';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("1bdfee24-5557-45f7-8f37-48b94f1a1156") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* cyrillic-ext */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("1f40a7d0-13fb-45cb-9088-d1bfa6385cb5") format('woff2');
-  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
-}
-/* cyrillic */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("31a46ebb-e62b-4189-8be8-b33a1f5de609") format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-/* greek */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("ba62a6fd-8a48-409f-a501-fa019b8b8aa9") format('woff2');
-  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("b1491a51-2582-4d97-ad8f-cfbcb8dde511") format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("582c5547-edf3-4167-8e9c-0024da2d4013") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("b59f21e5-7352-4f12-b74f-75160c0f2f24") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* cyrillic-ext */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("1f40a7d0-13fb-45cb-9088-d1bfa6385cb5") format('woff2');
-  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
-}
-/* cyrillic */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("31a46ebb-e62b-4189-8be8-b33a1f5de609") format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-/* greek */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("ba62a6fd-8a48-409f-a501-fa019b8b8aa9") format('woff2');
-  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("b1491a51-2582-4d97-ad8f-cfbcb8dde511") format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("582c5547-edf3-4167-8e9c-0024da2d4013") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("b59f21e5-7352-4f12-b74f-75160c0f2f24") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* cyrillic-ext */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("1f40a7d0-13fb-45cb-9088-d1bfa6385cb5") format('woff2');
-  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
-}
-/* cyrillic */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("31a46ebb-e62b-4189-8be8-b33a1f5de609") format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-/* greek */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("ba62a6fd-8a48-409f-a501-fa019b8b8aa9") format('woff2');
-  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("b1491a51-2582-4d97-ad8f-cfbcb8dde511") format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("582c5547-edf3-4167-8e9c-0024da2d4013") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("b59f21e5-7352-4f12-b74f-75160c0f2f24") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-</style>
-<script src="67fa0710-4196-4a9d-b572-afecbfb3c871"></script>
-<script src="6d52b96a-400c-4a5d-8a4a-497416d8af21"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600;700&family=Fraunces:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
   /* OBRA-derived bone/ink/plano palette — keys preserved for backward compat */
@@ -562,7 +122,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
 .sec-label{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;padding:0 10px 6px;flex-shrink:0}
 
 /* BADGES */
-.badge{font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;letter-spacing:.05em;cursor:default}
+.badge{font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 8px;border-radius:var(--nv-radius-pill);letter-spacing:.08em;text-transform:uppercase;cursor:default}
 .badge-hold{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
 .badge-lost{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
 .badge-active{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
@@ -3044,10 +2604,10 @@ html, body{background:var(--bone-50);color:var(--ink-900);font-family:var(--sans
 
 /* ---------- BUTTONS — mechanical, 2px radius ---------- */
 .btn{
-  border-radius:var(--r-1) !important;
+  border-radius:var(--nv-radius) !important;
   font-family:var(--sans) !important;
   border:1px solid var(--ink-700);
-  background:var(--bone-50);
+  background:transparent;
   color:var(--ink-900);
   padding:8px 14px;
   font-weight:500;
@@ -3056,14 +2616,15 @@ html, body{background:var(--bone-50);color:var(--ink-900);font-family:var(--sans
 }
 .btn:hover{background:var(--ink-900);color:var(--bone-50)}
 .btn:active{transform:translateY(1px);box-shadow:inset 0 1px 0 rgba(0,0,0,.12)}
-.btn-amber{background:var(--plano-500);border-color:var(--plano-500);color:var(--bone-50);font-weight:600}
-.btn-amber:hover{background:var(--plano-700);border-color:var(--plano-700);color:var(--bone-50)}
+.btn-amber{background:var(--nv-red);border-color:var(--nv-red);color:var(--nv-bone);font-weight:600}
+.btn-amber:hover{background:var(--plano-700);border-color:var(--plano-700);color:var(--nv-bone)}
 .btn-ghost{background:transparent;border-color:transparent;color:var(--ink-700)}
 .btn-ghost:hover{background:var(--bone-100);color:var(--ink-900)}
-.btn-green{background:var(--bone-50);border-color:var(--verde-500);color:var(--verde-500)}
-.btn-green:hover{background:var(--verde-500);color:var(--bone-50)}
-.btn-danger{background:var(--bone-50);border-color:var(--plano-500);color:var(--plano-700)}
-.btn-danger:hover{background:var(--plano-500);color:var(--bone-50)}
+.btn-green{background:transparent;border-color:var(--nv-success);color:var(--nv-success)}
+.btn-green:hover{background:var(--nv-success);border-color:var(--nv-success);color:var(--nv-bone)}
+.btn-danger{background:transparent;border-color:var(--nv-error);color:var(--nv-error)}
+.btn-danger:hover{background:var(--nv-error);border-color:var(--nv-error);color:var(--nv-bone)}
+.btn:disabled,.btn[disabled]{background:transparent !important;border-color:var(--nv-line) !important;color:var(--nv-grey) !important;cursor:not-allowed;transform:none;box-shadow:none}
 
 /* ---------- CHIPS, PILLS, BADGES → rectilinear ---------- */
 .chip, .bt-chip,
@@ -3963,6 +3524,91 @@ a:hover{opacity:.7}
 @media (prefers-reduced-motion:reduce){.sp-cross .core{animation:none;opacity:1}.sp-statusbox .ln{animation:none}.sp-statusbox .ln:first-child{opacity:1}.sp-track .seg{animation:none;width:60%}}
 
 </style>
+<style id="nv-tokens">
+:root {
+  /* === NOVANTU Plano Vivo — core === */
+  --nv-bone: #FAF8F2;
+  --nv-ink: #181613;
+  --nv-red: #C44A2C;
+  --nv-amber: #C8780F;
+  /* === neutrals === */
+  --nv-bone-dim: #F1EEE6;
+  --nv-line: #D8D2C4;
+  --nv-grey: #6B6256;
+  --nv-ink-soft: #2E2B27;
+  /* === semantic === */
+  --nv-success: #3E7A4E;
+  --nv-warning: #C8780F;
+  --nv-error: #A6311B;
+  --nv-info: #51687F;
+  /* === type === */
+  --nv-font-ui: 'Geist', system-ui, -apple-system, sans-serif;
+  --nv-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --nv-font-accent: 'Playfair Display', Georgia, serif; /* marketing only */
+  /* === shape & space === */
+  --nv-radius: 6px;        /* esquinas sobrias, casi rectas: es un plano, no una app de juguete */
+  --nv-radius-pill: 999px; /* solo badges */
+  --nv-border: 1px solid var(--nv-line);
+  --nv-shadow: 0 1px 2px rgba(24,22,19,.06), 0 4px 12px rgba(24,22,19,.06);
+  --nv-space: 8px;         /* grid base de espaciado: múltiplos de 8 */
+}
+/* === Fase A bridge — legacy theme vars now derive from nv tokens (single source of truth).
+   Loaded LAST in <head> so these definitions win over earlier :root blocks. === */
+:root{
+  --bone-50:var(--nv-bone);      /* fondo global -> bone */
+  --ink-900:var(--nv-ink);       /* texto -> ink */
+  --plano-500:var(--nv-red);     /* botones primarios / accent -> red */
+  --border:var(--nv-line);       /* bordes estandar -> line */
+  --rule:var(--nv-line);
+  --bg2:var(--nv-bone-dim);      /* superficie elevada -> bone dim */
+  --sans:var(--nv-font-ui);
+  --mono:var(--nv-font-mono);
+  --r2:var(--nv-radius);
+  /* Fase B — semantic states wired to brand tokens (§3.2) */
+  --verde-500:var(--nv-success); /* success -> earth green */
+  --red:var(--nv-error);         /* negative -> deep error red (never confusable with CTA) */
+  --blue:var(--nv-info);         /* info -> muted slate */
+}
+</style>
+<style id="nv-phase-b">
+/* ===== NOVANTU Fase B — splash / login (monogram on ink + reticle) ===== */
+.nv-splash{position:fixed;inset:0;z-index:9999;background:var(--nv-ink);display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+.nv-splash::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(250,248,242,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(250,248,242,.05) 1px,transparent 1px);
+  background-size:32px 32px}
+.nv-splash-col{position:relative;text-align:center;max-width:420px;width:100%}
+.nv-wordmark{font-family:var(--mono);font-weight:700;font-size:15px;letter-spacing:.32em;color:var(--nv-bone);text-transform:uppercase;margin-bottom:12px}
+.nv-tagline{font-family:var(--sans);font-size:15px;color:rgba(250,248,242,.8);margin-bottom:8px}
+.nv-funcline{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:rgba(250,248,242,.45);text-transform:uppercase;margin-bottom:36px}
+.nv-splash-col .btn{width:100%;padding:13px;font-size:14px}
+.nv-btn-onink{border-color:rgba(250,248,242,.45) !important;color:var(--nv-bone) !important}
+.nv-btn-onink:hover{background:var(--nv-bone) !important;color:var(--nv-ink) !important;border-color:var(--nv-bone) !important}
+.nv-sheet{position:relative;background:var(--nv-bone);border:1px solid var(--nv-line);border-radius:var(--nv-radius);box-shadow:0 24px 64px rgba(0,0,0,.45);padding:30px 34px;width:400px;max-width:100%;text-align:left}
+.nv-foot{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:rgba(250,248,242,.4);text-transform:uppercase;margin-top:26px;line-height:1.8}
+.nv-sheet-label{font-family:var(--mono);font-size:10px;color:var(--ink-500);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.nv-sheet-input{width:100%;background:var(--nv-bone);border:1px solid var(--ink-300);padding:10px 12px;color:var(--ink-900);font-size:13px;font-family:var(--sans)}
+.nv-sheet-input:focus{border-color:var(--ink-900);outline:none}
+
+/* ===== NOVANTU Fase B — empty states (reticle + line-art + next action) ===== */
+.nv-empty{position:relative;text-align:center;padding:56px 24px}
+.nv-empty::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(var(--nv-line) 1px,transparent 1px),linear-gradient(90deg,var(--nv-line) 1px,transparent 1px);
+  background-size:28px 28px;
+  -webkit-mask-image:radial-gradient(ellipse 62% 75% at 50% 42%,#000 25%,transparent 72%);
+  mask-image:radial-gradient(ellipse 62% 75% at 50% 42%,#000 25%,transparent 72%)}
+.nv-empty>*{position:relative}
+.nv-empty .nv-empty-ic{width:44px;height:44px;stroke:var(--ink-500);stroke-width:1.5;fill:none;stroke-linecap:square;stroke-linejoin:miter;margin-bottom:14px}
+.nv-empty-title{font-family:var(--sans);font-size:16px;font-weight:600;color:var(--ink-900);margin-bottom:6px}
+.nv-empty-line{font-family:var(--sans);font-size:12.5px;color:var(--ink-500);margin-bottom:18px;line-height:1.55}
+
+/* ===== Fase B — plan badge: mono stamp ===== */
+.tb-badge{text-transform:uppercase;letter-spacing:.06em}
+/* bid stage chips -> mono uppercase stamps (colors via semantic vars) */
+.bid-stage-badge{text-transform:uppercase;letter-spacing:.08em;border-radius:var(--nv-radius-pill)}
+.bid-stage-label{letter-spacing:.08em}
+/* hold = warning -> true amber, never confusable with the red CTA accent */
+.badge-hold{background:rgba(200,120,15,.1);color:var(--nv-warning);border-color:rgba(200,120,15,.4)}
+</style>
 </head>
 <body>
 <div class="app" id="app"></div>
@@ -4409,7 +4055,7 @@ const BID_PDF_BUCKET = 'bid-pdfs';
 // only the "Sign in" button and hide the subscription option.
 // ============================================================
 const PAYMENT_LINK_URL = '';   // ← PASTE YOUR PAYONEER PAYMENT LINK HERE
-const PLAN_NAME = 'Breakform Bidding · Monthly Plan';
+const PLAN_NAME = 'NOVANTU · Monthly Plan';
 const PLAN_PRICE = '$XXX USD / month';
 const PLAN_FEATURES = [
   'Unlimited projects and subcontractors',
@@ -4577,11 +4223,11 @@ function currencySymbol() {
 const DEFAULT_TEMPLATES = {
   rfp: {
     subject: "RFP — {{project.name}} — {{category}}",
-    body: "Hi {{sub.contact}},\n\nWe're requesting a proposal for the following project:\n\nProject: {{project.name}}\nCategory: {{category}}\nDue: {{project.dueDate}}\n\nPlans and scope are attached. Please reply with your bid and any clarifying questions.\n\nThanks,\n{{user.name}}\nBreakform\n{{user.email}}"
+    body: "Hi {{sub.contact}},\n\nWe're requesting a proposal for the following project:\n\nProject: {{project.name}}\nCategory: {{category}}\nDue: {{project.dueDate}}\n\nPlans and scope are attached. Please reply with your bid and any clarifying questions.\n\nThanks,\n{{user.name}}\n{{workspace.name}}\n{{user.email}}"
   },
   followup: {
     subject: "Follow-up — {{project.name}} — {{category}}",
-    body: "Hi {{sub.contact}},\n\nFollowing up on the RFP we sent for {{project.name}} ({{category}}).\nIf you need any additional information let us know — otherwise we'd appreciate your bid by {{project.dueDate}}.\n\nThanks,\n{{user.name}}\nBreakform"
+    body: "Hi {{sub.contact}},\n\nFollowing up on the RFP we sent for {{project.name}} ({{category}}).\nIf you need any additional information let us know — otherwise we'd appreciate your bid by {{project.dueDate}}.\n\nThanks,\n{{user.name}}\n{{workspace.name}}"
   }
 };
 
@@ -5258,6 +4904,45 @@ async function doPasswordReset() {
   else alert('We sent you an email with reset instructions.');
 }
 
+// ── NOVANTU brand helpers (Fase B) ───────────────────────────────────────────
+// [N] monogram: Geist Black N between draftsman brackets, amber construction
+// guides + compass circle, red dimension line below. Pure inline SVG.
+function nvMonogram(size) {
+  const s = size || 116;
+  return `<svg width="${s}" height="${s}" viewBox="0 0 120 120" fill="none" role="img" aria-label="NOVANTU">
+    <line x1="0" y1="58" x2="19" y2="58" stroke="var(--nv-amber)" stroke-width="1.5"/>
+    <line x1="101" y1="58" x2="120" y2="58" stroke="var(--nv-amber)" stroke-width="1.5"/>
+    <circle cx="110" cy="58" r="4" stroke="var(--nv-amber)" stroke-width="1.5"/>
+    <path d="M37 22 H26 V94 H37" stroke="var(--nv-bone)" stroke-width="4"/>
+    <path d="M83 22 H94 V94 H83" stroke="var(--nv-bone)" stroke-width="4"/>
+    <text x="60" y="60" text-anchor="middle" dominant-baseline="central" font-family="Geist, system-ui, sans-serif" font-weight="900" font-size="52" fill="var(--nv-bone)">N</text>
+    <line x1="42" y1="106" x2="78" y2="106" stroke="var(--nv-red)" stroke-width="1.5"/>
+    <line x1="42" y1="102" x2="42" y2="110" stroke="var(--nv-red)" stroke-width="1.5"/>
+    <line x1="78" y1="102" x2="78" y2="110" stroke="var(--nv-red)" stroke-width="1.5"/>
+  </svg>`;
+}
+
+// Line-art icons for empty states (1.5px stroke, rectilinear, monochrome)
+const NV_EMPTY_ICONS = {
+  estimator: '<svg class="nv-empty-ic" viewBox="0 0 24 24"><path d="M3 17.5 16.5 4l3.5 3.5L6.5 21H3v-3.5z"/><path d="M13 7.5l3.5 3.5"/><path d="M3 21h18" opacity=".35"/></svg>',
+  subs:      '<svg class="nv-empty-ic" viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="3.5"/><path d="M4.5 20v-.5a7.5 7.5 0 0 1 15 0v.5"/></svg>',
+  schedule:  '<svg class="nv-empty-ic" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16"/><path d="M3 9h18M8 4.5V2.5M16 4.5V2.5"/><path d="M6.5 13h6M10.5 16.5h7"/></svg>',
+  rfi:       '<svg class="nv-empty-ic" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M9.6 9.4a2.4 2.4 0 1 1 3.3 2.23c-.78.31-.9.87-.9 1.62"/><path d="M12 16.6v.01"/></svg>',
+  dlog:      '<svg class="nv-empty-ic" viewBox="0 0 24 24"><rect x="4.5" y="3" width="15" height="18"/><path d="M8 8h8M8 12h8M8 16h4.5"/></svg>',
+  bids:      '<svg class="nv-empty-ic" viewBox="0 0 24 24"><path d="M3 17.5 8.5 6.5l3 5.5L15 4l6 13.5"/><path d="M3 21h18"/></svg>'
+};
+
+// Empty state: subtle reticle + line-art icon + one line of copy + next action.
+// opts = { icon, title, line, btn:{label, onclick} }
+function nvEmpty(opts) {
+  return `<div class="nv-empty">
+    ${NV_EMPTY_ICONS[opts.icon] || ''}
+    <div class="nv-empty-title">${opts.title}</div>
+    <div class="nv-empty-line">${opts.line}</div>
+    ${opts.btn ? `<button class="btn btn-amber btn-sm" onclick="${opts.btn.onclick}">${opts.btn.label}</button>` : ''}
+  </div>`;
+}
+
 function buildLoginScreen() {
   // Three sub-screens, switched via ST.authScreen:
   //   'welcome'  → choose between Sign in / Subscribe
@@ -5271,89 +4956,80 @@ function buildLoginScreen() {
 
 function buildWelcomeScreen() {
   const subscribeEnabled = !!PAYMENT_LINK_URL;
-  return `<div style="position:fixed;inset:0;background:var(--bg1);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px">
-    <div style="background:var(--bg0);border:1px solid var(--border);border-radius:var(--r2);padding:40px 40px 32px;width:420px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);text-align:center">
-      <div class="bf-wm" style="font-family:var(--sans);font-size:20px;font-weight:700;letter-spacing:.04em;color:var(--text);margin-bottom:6px"><span class="lt">B</span><span class="lt">R</span><span class="lt">E</span><span class="lt">A</span><span class="lt">K</span><span class="lt accent">F</span><span class="lt accent">O</span><span class="lt accent">R</span><span class="lt accent">M</span><span class="reg">®</span></div>
-      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:32px">Bidding Manager</div>
-      <div style="font-size:14px;color:var(--text2);margin-bottom:28px;line-height:1.6">Bidding management for builders.<br>Track subcontractors, prices, and follow-ups in one place.</div>
-      <button class="btn btn-amber" style="width:100%;padding:14px;font-size:14px;font-weight:600;margin-bottom:10px" onclick="ST.authScreen='login';render()">
-        Sign in
-      </button>
-      ${subscribeEnabled ? `
-      <button class="btn" style="width:100%;padding:14px;font-size:14px;font-weight:600;background:var(--bg2);border:1px solid var(--border2);color:var(--text)" onclick="ST.authScreen='pricing';render()">
-        Subscribe →
-      </button>
-      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:18px;letter-spacing:.04em">New here? Start your subscription to get access.</div>
-      ` : `
-      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:18px;letter-spacing:.04em">Existing customers only. Contact us for access.</div>
-      `}
-    </div>
-  </div>`;
+  return `<div class="nv-splash"><div class="nv-splash-col">
+    <div style="margin-bottom:20px">${nvMonogram(116)}</div>
+    <div class="nv-wordmark">[ NOVANTU ]</div>
+    <div class="nv-tagline">The estimator's operating system.</div>
+    <div class="nv-funcline">Take-offs, estimates &amp; bid leveling — in one place</div>
+    <button class="btn btn-amber" style="margin-bottom:10px" onclick="ST.authScreen='login';render()">Sign in</button>
+    ${subscribeEnabled ? `
+    <button class="btn nv-btn-onink" onclick="ST.authScreen='pricing';render()">Subscribe →</button>
+    <div class="nv-foot">New here? Start your subscription to get access.</div>
+    ` : `
+    <div class="nv-foot">Existing customers only · Contact us for access</div>
+    `}
+  </div></div>`;
 }
 
 function buildLoginFormScreen() {
-  return `<div style="position:fixed;inset:0;background:var(--bg1);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px">
-    <div style="background:var(--bg0);border:1px solid var(--border);border-radius:var(--r2);padding:32px 36px;width:380px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
-        <button class="btn btn-ghost" style="padding:4px 8px;font-size:14px" onclick="ST.authScreen='welcome';render()">←</button>
-        <div>
-          <div class="bf-wm" style="font-family:var(--sans);font-size:14px;font-weight:700;letter-spacing:.04em;color:var(--text)"><span class="lt">B</span><span class="lt">R</span><span class="lt">E</span><span class="lt">A</span><span class="lt">K</span><span class="lt accent">F</span><span class="lt accent">O</span><span class="lt accent">R</span><span class="lt accent">M</span><span class="reg">®</span></div>
-          <div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase">Sign in</div>
-        </div>
-      </div>
-      <div style="margin-bottom:12px">
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Email</div>
-        <input id="login-user" type="email" autocomplete="username" style="width:100%;background:var(--bg1);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-size:13px;font-family:var(--sans)" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
-      </div>
-      <div style="margin-bottom:16px">
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Password</div>
-        <input id="login-pass" type="password" autocomplete="current-password" style="width:100%;background:var(--bg1);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-size:13px;font-family:var(--sans)" onkeydown="if(event.key==='Enter')doLogin(document.getElementById('login-user').value,document.getElementById('login-pass').value)">
-      </div>
-      <button id="login-btn" class="btn btn-amber" style="width:100%;padding:10px;font-size:13px" onclick="doLogin(document.getElementById('login-user').value,document.getElementById('login-pass').value)">Sign in</button>
-      <div id="login-error" style="color:var(--red);font-size:11px;margin-top:10px;min-height:14px;font-family:var(--mono)"></div>
-      <div style="margin-top:18px;text-align:center">
-        <a onclick="doPasswordReset()" style="color:var(--text3);font-size:11px;cursor:pointer;text-decoration:underline">Forgot your password?</a>
+  return `<div class="nv-splash"><div class="nv-sheet">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+      <button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:14px" onclick="ST.authScreen='welcome';render()">←</button>
+      <div>
+        <div style="font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.24em;color:var(--ink-900)">[ NOVANTU ]</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--ink-500);letter-spacing:.1em;text-transform:uppercase;margin-top:3px">Sign in</div>
       </div>
     </div>
-  </div>`;
+    <div style="margin-bottom:12px">
+      <div class="nv-sheet-label">Email</div>
+      <input id="login-user" type="email" autocomplete="username" class="nv-sheet-input" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    </div>
+    <div style="margin-bottom:18px">
+      <div class="nv-sheet-label">Password</div>
+      <input id="login-pass" type="password" autocomplete="current-password" class="nv-sheet-input" onkeydown="if(event.key==='Enter')doLogin(document.getElementById('login-user').value,document.getElementById('login-pass').value)">
+    </div>
+    <button id="login-btn" class="btn btn-amber" style="width:100%;padding:11px;font-size:13px" onclick="doLogin(document.getElementById('login-user').value,document.getElementById('login-pass').value)">Sign in</button>
+    <div id="login-error" style="color:var(--nv-error);font-size:11px;margin-top:10px;min-height:14px;font-family:var(--mono)"></div>
+    <div style="margin-top:16px;text-align:center">
+      <a onclick="doPasswordReset()" style="color:var(--ink-500);font-size:11px;cursor:pointer;text-decoration:underline">Forgot your password?</a>
+    </div>
+  </div></div>`;
 }
 
 function buildPricingScreen() {
-  return `<div style="position:fixed;inset:0;background:var(--bg1);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;overflow-y:auto">
-    <div style="background:var(--bg0);border:1px solid var(--border);border-radius:var(--r2);padding:36px 40px;width:480px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px">
-        <button class="btn btn-ghost" style="padding:4px 8px;font-size:14px" onclick="ST.authScreen='welcome';render()">←</button>
-        <div>
-          <div class="bf-wm" style="font-family:var(--sans);font-size:14px;font-weight:700;letter-spacing:.04em;color:var(--text)"><span class="lt">B</span><span class="lt">R</span><span class="lt">E</span><span class="lt">A</span><span class="lt">K</span><span class="lt accent">F</span><span class="lt accent">O</span><span class="lt accent">R</span><span class="lt accent">M</span><span class="reg">®</span></div>
-          <div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase">Subscription</div>
-        </div>
-      </div>
-      <div style="text-align:center;margin-bottom:24px">
-        <div style="font-family:var(--mono);font-size:10px;color:var(--amber);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">${esc(PLAN_NAME)}</div>
-        <div style="font-size:32px;font-weight:700;color:var(--text);margin-bottom:4px;letter-spacing:-.02em">${esc(PLAN_PRICE)}</div>
-      </div>
-      <div style="background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:24px">
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">What's included</div>
-        ${PLAN_FEATURES.map(f => `
-          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:13px;color:var(--text2);line-height:1.5">
-            <span style="color:var(--green);font-weight:700;flex-shrink:0">✓</span>
-            <span>${esc(f)}</span>
-          </div>
-        `).join('')}
-      </div>
-      <a href="${esc(PAYMENT_LINK_URL)}" target="_blank" rel="noopener" class="btn btn-amber" style="display:block;width:100%;padding:14px;font-size:14px;font-weight:600;text-align:center;text-decoration:none;box-sizing:border-box">
-        Continue to payment →
-      </a>
-      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:14px;text-align:center;line-height:1.6;letter-spacing:.02em">
-        Secure payment via Payoneer · Cards, ACH, bank transfer<br>
-        Once your payment is confirmed, we'll create your account and email your login details within 1 business day.
-      </div>
-      <div style="border-top:1px solid var(--border);margin-top:22px;padding-top:14px;text-align:center">
-        <span style="font-size:11px;color:var(--text3)">Already a customer? </span>
-        <a onclick="ST.authScreen='login';render()" style="color:var(--amber);font-size:11px;cursor:pointer;text-decoration:underline">Sign in</a>
+  return `<div class="nv-splash"><div class="nv-sheet" style="width:460px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:26px">
+      <button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:14px" onclick="ST.authScreen='welcome';render()">←</button>
+      <div>
+        <div style="font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.24em;color:var(--ink-900)">[ NOVANTU ]</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--ink-500);letter-spacing:.1em;text-transform:uppercase;margin-top:3px">Subscription</div>
       </div>
     </div>
-  </div>`;
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--nv-red);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">${esc(PLAN_NAME)}</div>
+      <div style="font-family:var(--sans);font-size:32px;font-weight:700;color:var(--ink-900);margin-bottom:4px;letter-spacing:-.02em">${esc(PLAN_PRICE)}</div>
+    </div>
+    <div style="background:var(--nv-bone-dim);border:1px solid var(--nv-line);padding:18px 20px;margin-bottom:24px">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--ink-500);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">What's included</div>
+      ${PLAN_FEATURES.map(f => `
+        <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:13px;color:var(--ink-700);line-height:1.5">
+          <span style="color:var(--nv-success);font-weight:700;flex-shrink:0">✓</span>
+          <span>${esc(f)}</span>
+        </div>
+      `).join('')}
+    </div>
+    <a href="${esc(PAYMENT_LINK_URL)}" target="_blank" rel="noopener" class="btn btn-amber" style="display:block;width:100%;padding:13px;font-size:14px;font-weight:600;text-align:center;text-decoration:none;box-sizing:border-box">
+      Continue to payment →
+    </a>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--ink-500);margin-top:14px;text-align:center;line-height:1.6;letter-spacing:.02em">
+      Secure payment via Payoneer · Cards, ACH, bank transfer<br>
+      Once your payment is confirmed, we'll create your account and email your login details within 1 business day.
+    </div>
+    <div style="border-top:1px solid var(--nv-line);margin-top:22px;padding-top:14px;text-align:center">
+      <span style="font-size:11px;color:var(--ink-500)">Already a customer? </span>
+      <a onclick="ST.authScreen='login';render()" style="color:var(--nv-red);font-size:11px;cursor:pointer;text-decoration:underline">Sign in</a>
+    </div>
+  </div></div>`;
 }
 
 // ============================================================
@@ -5968,7 +5644,7 @@ function buildFilesTab() {
         </div>
 
         <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:18px;max-width:640px">
-          These templates are used when you click <b>SENT</b> on any project category. Use tokens like <code>{{project.name}}</code>, <code>{{category}}</code>, <code>{{sub.contact}}</code>, <code>{{user.name}}</code>, <code>{{user.email}}</code>, <code>{{project.dueDate}}</code> — they get replaced per recipient at send time.
+          These templates are used when you click <b>SENT</b> on any project category. Use tokens like <code>{{project.name}}</code>, <code>{{category}}</code>, <code>{{sub.contact}}</code>, <code>{{user.name}}</code>, <code>{{user.email}}</code>, <code>{{workspace.name}}</code>, <code>{{project.dueDate}}</code> — they get replaced per recipient at send time.
         </div>
 
         ${['rfp','followup'].map(tid => {
@@ -6039,6 +5715,7 @@ function renderTokens(tpl, ctx) {
     .replaceAll('{{category}}', ctx.category || '')
     .replaceAll('{{sub.company}}', ctx.sub?.company || '')
     .replaceAll('{{sub.contact}}', ctx.sub?.contact || 'team')
+    .replaceAll('{{workspace.name}}', (getSettings().print?.companyName) || (ST.workspaces?.[ST.activeWorkspace]?.name) || '')
     .replaceAll('{{user.name}}', ctx.user?.name || '')
     .replaceAll('{{user.email}}', ctx.user?.email || '');
 }
@@ -7239,7 +6916,7 @@ function buildBuilderPrintView() {
         <div style="font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding-bottom:4px;border-bottom:1px solid var(--border);margin-top:4px">Company</div>
 
         <div><div style="font-family:var(--mono);font-size:10px;color:var(--text2);margin-bottom:4px">Company name</div>
-          <input type="text" class="minp" value="${esc(pi.companyName||'')}" placeholder="e.g. Breakform Construction" onblur="settingsSetPath(['print','companyName'], this.value)" style="width:100%;box-sizing:border-box"></div>
+          <input type="text" class="minp" value="${esc(pi.companyName||'')}" placeholder="e.g. Summit Builders Inc." onblur="settingsSetPath(['print','companyName'], this.value)" style="width:100%;box-sizing:border-box"></div>
 
         <div><div style="font-family:var(--mono);font-size:10px;color:var(--text2);margin-bottom:4px">Address <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">(one line each)</span></div>
           <textarea class="minp" rows="3" onblur="settingsSetPath(['print','companyAddress'], this.value)" placeholder="127 Arena Street&#10;El Segundo, CA 90245&#10;USA" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:12px;resize:vertical;line-height:1.5">${esc(pi.companyAddress||'')}</textarea></div>
@@ -14046,11 +13723,7 @@ function dlogDeleteEntry(pid, logId) {
 function buildDailyLogTab() {
   const projs = allProjects();
   if (projs.length === 0) {
-    return `<div class="dlog-wrap"><div class="dlog-empty">
-      <div style="font-size:34px;opacity:.5;margin-bottom:12px">▤</div>
-      <div style="font-family:var(--sans);font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">No projects yet</div>
-      <div style="font-family:var(--mono);font-size:11px;color:var(--text3)">Add a project first, then log daily field activity here.</div>
-    </div></div>`;
+    return `<div class="dlog-wrap">${nvEmpty({icon:'dlog',title:'No projects yet',line:'Add a project first — daily logs live inside each job.',btn:{label:'Go to projects',onclick:"setTab('projects')"}})}</div>`;
   }
   const p = dlogActiveProject();
   const logs = dlogGet(p.id).slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
@@ -14070,12 +13743,7 @@ function buildDailyLogTab() {
     </div>
 
     ${logs.length === 0
-      ? `<div class="dlog-empty">
-          <div style="font-size:34px;opacity:.5;margin-bottom:12px">▤</div>
-          <div style="font-family:var(--sans);font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">No log entries yet</div>
-          <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:16px">Record weather, crew, work performed, and site photos each day.</div>
-          <button class="btn btn-amber btn-sm" onclick="dlogOpenModal('${p.id}',null)">+ Log today's work</button>
-        </div>`
+      ? nvEmpty({icon:'dlog',title:'No log entries yet',line:'Record weather, crew, and work performed — two minutes a day.',btn:{label:"+ Log today's work",onclick:`dlogOpenModal('${p.id}',null)`}})
       : `<div class="dlog-feed">
           ${logs.map(l => dlogRenderCard(p.id, l)).join('')}
         </div>`}
@@ -14742,12 +14410,9 @@ function buildRfiTab() {
     </div>
 
     ${all.length === 0
-      ? `<div class="rfi-empty">
-          <div style="font-size:32px;opacity:.5;margin-bottom:12px">▤</div>
-          <div style="font-family:var(--sans);font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">${filter==='all'?'No RFIs yet':'Nothing here'}</div>
-          <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:16px">${filter==='all'?'Create an RFI and assign it to someone in the office.':'Try a different filter.'}</div>
-          ${filter==='all'?`<button class="btn btn-amber btn-sm" onclick="rfiStartNew()">+ New RFI</button>`:''}
-        </div>`
+      ? nvEmpty(filter==='all'
+          ? {icon:'rfi',title:'No RFIs yet',line:'Flag the first open question — assign it and track the answer here.',btn:{label:'+ New RFI',onclick:'rfiStartNew()'}}
+          : {icon:'rfi',title:'Nothing here',line:'Try a different filter.'})
       : `<div class="rfi-list">
           ${all.map(r => rfiRenderRow(r)).join('')}
         </div>`}
@@ -15192,11 +14857,7 @@ function schedDateRange(sched) {
 function buildScheduleTab() {
   const projs = allProjects();
   if (projs.length === 0) {
-    return `<div class="sched-wrap"><div class="sched-empty">
-      <div style="font-size:34px;opacity:.5;margin-bottom:12px">⊞</div>
-      <div style="font-family:var(--sans);font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">No projects yet</div>
-      <div style="font-family:var(--mono);font-size:11px;color:var(--text3)">Add a project first, then build its schedule here.</div>
-    </div></div>`;
+    return `<div class="sched-wrap">${nvEmpty({icon:'schedule',title:'No projects yet',line:'Add a project first, then build its schedule here.',btn:{label:'Go to projects',onclick:"setTab('projects')"}})}</div>`;
   }
 
   const p = schedActiveProject();
@@ -15222,12 +14883,7 @@ function buildScheduleTab() {
     </div>
 
     ${sched.tasks.length === 0
-      ? `<div class="sched-empty">
-          <div style="font-size:34px;opacity:.5;margin-bottom:12px">⊞</div>
-          <div style="font-family:var(--sans);font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">No tasks scheduled</div>
-          <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:16px">Start by adding phases (Foundation, Framing…) and tasks.</div>
-          <button class="btn btn-amber btn-sm" onclick="schedOpenTaskModal('${p.id}',null)">+ Add first task</button>
-        </div>`
+      ? nvEmpty({icon:'schedule',title:'No tasks scheduled',line:'Start with phases — Foundation, Framing — then drop tasks inside.',btn:{label:'+ Add first task',onclick:`schedOpenTaskModal('${p.id}',null)`}})
       : view === 'gantt' ? buildScheduleGantt(p, sched) : buildScheduleList(p, sched)}
   </div>`;
 }
@@ -17236,11 +16892,7 @@ function classifyBid(price, stats) {
 function buildBidComparisonView(pid, projName, cat) {
   const bids = getBidsForProjCat(projName, cat);
   if (!bids.length) {
-    return `<div class="bcv-empty">
-      <div class="bcv-empty-icon">⊘</div>
-      <div class="bcv-empty-title">No bids yet</div>
-      <div class="bcv-empty-sub">Send RFPs from the SENT column and add bids from the Subcontractors tab to see comparison.</div>
-    </div>`;
+    return nvEmpty({icon:'bids',title:'No bids yet',line:"Invite your subs — they don't even need an account. Send RFPs to get prices in.",btn:{label:'Go to subcontractors',onclick:"setTab('subs')"}});
   }
 
   // Prepare data
@@ -19577,9 +19229,7 @@ function deriveCodes(setup) {
 function buildEstimatorTab() {
   const projs = allProjects();
   if (!projs.length) {
-    return `<div style="padding:60px 40px;text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">
-      No projects yet. Create one from the <a onclick="setTab('projects')" style="color:var(--amber);cursor:pointer;text-decoration:underline">Projects tab</a> to start estimating.
-    </div>`;
+    return nvEmpty({icon:'estimator',title:'No take-off projects yet',line:'Create a project, upload the plans, and start measuring.',btn:{label:'Go to projects',onclick:"setTab('projects')"}});
   }
 
   // Auto-select first project if nothing selected, or fallback if selected was deleted
