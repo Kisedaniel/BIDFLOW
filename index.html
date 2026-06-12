@@ -15556,6 +15556,13 @@ function buildWorkspaceSwitcher() {
 
 // ── Wizard for creating a new workspace ──────────────────────────────────────
 
+// RFI template presets offered in the workspace wizard (step 5).
+const WS_RFI_PRESETS = [
+      { title: 'Schedule clarification', body: 'Subject: RFI — Schedule discrepancy on {sheet}\n\nDear {architect},\n\nWhile reviewing the {discipline} drawings for {project}, we noted that the {item} schedule on {sheet} does not appear to cover all tags shown on the plan. Could you please clarify or issue a revised schedule?\n\nSpecifically: [describe issue]\n\nPlease respond by [date] so this does not impact our bid timeline.\n\nThank you,\n{your name}' },
+      { title: 'Coordination conflict', body: 'Subject: RFI — Coordination conflict between {discipline_a} and {discipline_b}\n\nDear {architect},\n\nWe identified a possible coordination issue between the {discipline_a} drawings and {discipline_b} drawings on {project}. \n\nSpecifically: [describe issue with sheet references]\n\nPlease advise on how this should be resolved before we finalize our bid.\n\nThank you,\n{your name}' },
+      { title: 'Missing specification', body: 'Subject: RFI — Missing specification for {item}\n\nDear {architect},\n\nWe do not see a finish/product specification for {item} shown on {sheet} of {project}. Without this, we cannot price the line item accurately.\n\nCould you please provide the spec, or confirm "allowance" pricing?\n\nThank you,\n{your name}' },
+];
+
 function buildWsWizard() {
   if (!ST.wsWizard) return '';
   const w = ST.wsWizard;
@@ -15568,7 +15575,7 @@ function buildWsWizard() {
       <div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.06em">Step ${step} of 5</div>
       <div style="display:flex;gap:8px">
         ${step > 1 ? `<button class="btn btn-ghost" onclick="ST.wsWizard.step=${step-1};render()">← Back</button>` : ''}
-        <button class="btn btn-amber" ${canNext?'':'disabled'} onclick="wsWizardNext()">${nextLabel}</button>
+        <button class="btn btn-amber" id="ws-wiz-next" ${canNext?'':'disabled'} onclick="wsWizardNext()">${nextLabel}</button>
       </div>
     </div>`;
 
@@ -15588,7 +15595,7 @@ function buildWsWizard() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
           <div>
             <div class="modal-label">Workspace name</div>
-            <input type="text" class="minp" placeholder="Acme General Contracting" value="${esc(cfg.name||'')}" oninput="ST.wsWizard.config.name=this.value;render()">
+            <input type="text" class="minp" placeholder="Acme General Contracting" value="${esc(cfg.name||'')}" oninput="ST.wsWizard.config.name=this.value;wsWizardSyncNext()">
           </div>
           <div>
             <div class="modal-label">Wordmark <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">(shown in topbar)</span></div>
@@ -15660,7 +15667,7 @@ function buildWsWizard() {
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:22px">
           ${SUBSCRIPTION_PLANS.map(plan => {
             const isSel = cfg.planId === plan.id;
-            return `<button onclick="ST.wsWizard.config.planId='${plan.id}';ST.wsWizard.config.features={...${JSON.stringify(plan.features)}};render()"
+            return `<button onclick="wsWizardPickPlan('${plan.id}')"
               style="text-align:left;padding:16px 14px;border-radius:8px;cursor:pointer;transition:all .15s;background:${isSel?'var(--amber-bg)':'var(--bg)'};border:2px solid ${isSel?'var(--amber)':'var(--border)'}">
               <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px">
                 <span style="font-family:var(--sans);font-size:15px;font-weight:700;color:${isSel?'var(--amber)':'var(--text)'}">${esc(plan.name)}</span>
@@ -15701,8 +15708,6 @@ function buildWsWizard() {
     if (!cfg.divisions) cfg.divisions = WS_DEFAULT_DIVISIONS_GC.slice();
     if (!cfg.divisionsPreset) cfg.divisionsPreset = 'gc';
 
-    const setPreset = (presetId, list) => `ST.wsWizard.config.divisionsPreset='${presetId}';ST.wsWizard.config.divisions=${JSON.stringify(list).replace(/'/g,"\\'")};render()`;
-
     body = `
       <div style="padding:24px 24px 0">
         <div style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:6px">03 · BID Divisions</div>
@@ -15710,9 +15715,9 @@ function buildWsWizard() {
         <div style="font-family:var(--sans);font-size:12px;color:var(--text3);margin-bottom:20px;line-height:1.55">These divisions appear in the Builder when creating estimates. Pick a preset or build a custom list.</div>
 
         <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-          <button class="btn ${cfg.divisionsPreset==='csi'?'btn-amber':'btn-ghost'} btn-sm" onclick="${setPreset('csi', WS_DEFAULT_DIVISIONS_CSI)}">CSI MasterFormat (23)</button>
-          <button class="btn ${cfg.divisionsPreset==='gc'?'btn-amber':'btn-ghost'} btn-sm" onclick="${setPreset('gc', WS_DEFAULT_DIVISIONS_GC)}">GC Standard (23)</button>
-          <button class="btn ${cfg.divisionsPreset==='bantu'?'btn-amber':'btn-ghost'} btn-sm" onclick="${setPreset('bantu', WS_DEFAULT_DIVISIONS_BANTU)}">BANTU-style (32)</button>
+          <button class="btn ${cfg.divisionsPreset==='csi'?'btn-amber':'btn-ghost'} btn-sm" onclick="wsWizardSetDivPreset('csi')">CSI MasterFormat (23)</button>
+          <button class="btn ${cfg.divisionsPreset==='gc'?'btn-amber':'btn-ghost'} btn-sm" onclick="wsWizardSetDivPreset('gc')">GC Standard (23)</button>
+          <button class="btn ${cfg.divisionsPreset==='bantu'?'btn-amber':'btn-ghost'} btn-sm" onclick="wsWizardSetDivPreset('bantu')">BANTU-style (32)</button>
           <button class="btn ${cfg.divisionsPreset==='custom'?'btn-amber':'btn-ghost'} btn-sm" onclick="ST.wsWizard.config.divisionsPreset='custom';if(!ST.wsWizard.config.divisions||!ST.wsWizard.config.divisions.length)ST.wsWizard.config.divisions=['Division 1'];render()">Custom (blank)</button>
         </div>
 
@@ -15751,9 +15756,9 @@ function buildWsWizard() {
         <div style="background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:14px">
           <div class="modal-label" style="margin-bottom:8px">Pick from common Los Angeles jurisdictions</div>
           <div style="display:flex;flex-wrap:wrap;gap:6px">
-            ${WS_JURISDICTION_PRESETS.map(j => {
+            ${WS_JURISDICTION_PRESETS.map((j, ji) => {
               const isIn = (cfg.jurisdictions||[]).includes(j);
-              return `<button onclick="${isIn ? `ST.wsWizard.config.jurisdictions=ST.wsWizard.config.jurisdictions.filter(x=>x!=='${j.replace(/'/g,"\\'")}')` : `(ST.wsWizard.config.jurisdictions=ST.wsWizard.config.jurisdictions||[]).push('${j.replace(/'/g,"\\'")}')`};render()"
+              return `<button onclick="wsWizardToggleJur(${ji})"
                 style="background:${isIn?'var(--amber-bg)':'var(--bg)'};border:1px solid ${isIn?'var(--amber)':'var(--border)'};color:${isIn?'var(--amber)':'var(--text2)'};padding:5px 11px;border-radius:3px;font-family:var(--sans);font-size:11px;cursor:pointer;transition:all .12s">${isIn?'✓ ':''}${esc(j)}</button>`;
             }).join('')}
           </div>
@@ -15789,15 +15794,11 @@ function buildWsWizard() {
     nextLabel = 'Create workspace ✓';
     if (!cfg.rfiTemplates) cfg.rfiTemplates = [];
 
-    const presets = [
-      { title: 'Schedule clarification', body: 'Subject: RFI — Schedule discrepancy on {sheet}\n\nDear {architect},\n\nWhile reviewing the {discipline} drawings for {project}, we noted that the {item} schedule on {sheet} does not appear to cover all tags shown on the plan. Could you please clarify or issue a revised schedule?\n\nSpecifically: [describe issue]\n\nPlease respond by [date] so this does not impact our bid timeline.\n\nThank you,\n{your name}' },
-      { title: 'Coordination conflict', body: 'Subject: RFI — Coordination conflict between {discipline_a} and {discipline_b}\n\nDear {architect},\n\nWe identified a possible coordination issue between the {discipline_a} drawings and {discipline_b} drawings on {project}. \n\nSpecifically: [describe issue with sheet references]\n\nPlease advise on how this should be resolved before we finalize our bid.\n\nThank you,\n{your name}' },
-      { title: 'Missing specification', body: 'Subject: RFI — Missing specification for {item}\n\nDear {architect},\n\nWe do not see a finish/product specification for {item} shown on {sheet} of {project}. Without this, we cannot price the line item accurately.\n\nCould you please provide the spec, or confirm "allowance" pricing?\n\nThank you,\n{your name}' },
-    ];
+    const presets = WS_RFI_PRESETS;
 
     body = `
       <div style="padding:24px 24px 0">
-        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:6px">04 · RFI Templates</div>
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:6px">05 · RFI Templates</div>
         <div style="font-family:var(--sans);font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px">Pre-built RFI email templates</div>
         <div style="font-family:var(--sans);font-size:12px;color:var(--text3);margin-bottom:18px;line-height:1.55">Optional. Templates are used to generate RFI emails from items marked "RFI" in Plan Review. Use <code style="font-family:var(--mono);background:var(--bg2);padding:1px 5px;border-radius:2px">{placeholders}</code> like {architect}, {project}, {sheet}, {discipline}, {item}, {your name}.</div>
 
@@ -15806,7 +15807,7 @@ function buildWsWizard() {
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             ${presets.map((p, i) => {
               const isIn = (cfg.rfiTemplates||[]).some(t => t.title === p.title);
-              return `<button class="btn ${isIn?'btn-amber':'btn-ghost'} btn-sm" onclick="${isIn ? `ST.wsWizard.config.rfiTemplates=ST.wsWizard.config.rfiTemplates.filter(t=>t.title!=='${p.title.replace(/'/g,"\\'")}')` : `(ST.wsWizard.config.rfiTemplates=ST.wsWizard.config.rfiTemplates||[]).push(${JSON.stringify(p).replace(/'/g,"\\'")})`};render()">${isIn?'✓ ':'+ '}${esc(p.title)}</button>`;
+              return `<button class="btn ${isIn?'btn-amber':'btn-ghost'} btn-sm" onclick="wsWizardToggleRfiPreset(${i})">${isIn?'✓ ':'+ '}${esc(p.title)}</button>`;
             }).join('')}
           </div>
         </div>
@@ -15859,6 +15860,59 @@ function buildWsWizard() {
       </div>
     </div>
   `;
+}
+
+// ── Wizard helpers (data stays in JS — never serialize JSON into onclick attrs) ──
+// Surgically sync the Next button without a full re-render (keeps input focus).
+function wsWizardSyncNext() {
+  const btn = document.getElementById('ws-wiz-next');
+  if (!btn || !ST.wsWizard) return;
+  const step = ST.wsWizard.step || 1;
+  const cfg = ST.wsWizard.config || {};
+  let ok = true;
+  if (step === 1) ok = !!(cfg.name && cfg.name.trim());
+  else if (step === 3) ok = (cfg.divisions || []).length > 0;
+  else if (step === 4) ok = (cfg.jurisdictions || []).length > 0;
+  btn.disabled = !ok;
+}
+
+function wsWizardPickPlan(planId) {
+  if (!ST.wsWizard) return;
+  const plan = getPlanById(planId);
+  if (!plan) return;
+  ST.wsWizard.config.planId = planId;
+  ST.wsWizard.config.features = { ...plan.features };
+  render();
+}
+
+function wsWizardSetDivPreset(presetId) {
+  if (!ST.wsWizard) return;
+  const map = { csi: WS_DEFAULT_DIVISIONS_CSI, gc: WS_DEFAULT_DIVISIONS_GC, bantu: WS_DEFAULT_DIVISIONS_BANTU };
+  const list = map[presetId];
+  if (!list) return;
+  ST.wsWizard.config.divisionsPreset = presetId;
+  ST.wsWizard.config.divisions = list.slice();
+  render();
+}
+
+function wsWizardToggleJur(idx) {
+  if (!ST.wsWizard) return;
+  const j = WS_JURISDICTION_PRESETS[idx];
+  if (j === undefined) return;
+  const arr = ST.wsWizard.config.jurisdictions = ST.wsWizard.config.jurisdictions || [];
+  const at = arr.indexOf(j);
+  if (at >= 0) arr.splice(at, 1); else arr.push(j);
+  render();
+}
+
+function wsWizardToggleRfiPreset(idx) {
+  if (!ST.wsWizard) return;
+  const p = WS_RFI_PRESETS[idx];
+  if (!p) return;
+  const arr = ST.wsWizard.config.rfiTemplates = ST.wsWizard.config.rfiTemplates || [];
+  const at = arr.findIndex(t => t.title === p.title);
+  if (at >= 0) arr.splice(at, 1); else arr.push({ ...p });
+  render();
 }
 
 async function wsWizardNext() {
